@@ -125,10 +125,18 @@ public sealed class BookService(
         var book = await db.Books.FirstOrDefaultAsync(b => b.Id == id, cancellationToken)
             ?? throw NotFoundException.For("Book", id);
 
+        try
+        {
+            files.Delete(book.FilePath);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            throw new ConflictException("The book's file couldn't be deleted. The library folder may be read-only.");
+        }
+
         db.Books.Remove(book);
         await db.SaveChangesAsync(cancellationToken);
         covers.Delete(id);
-        files.Delete(book.FilePath);
         await new CatalogResolver(db).RemoveOrphansAsync(cancellationToken);
     }
 

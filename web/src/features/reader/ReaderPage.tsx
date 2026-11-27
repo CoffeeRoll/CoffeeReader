@@ -77,6 +77,8 @@ export default function ReaderPage() {
 
   const layout = useMemo<PageLayout | null>(() => {
     if (!geometry || !viewport || viewport.width < 50 || viewport.height < 50) return null;
+    // Wait for the page frame to take its computed size before laying anything out.
+    if (Math.abs(viewport.width - geometry.width) > 1) return null;
     return {
       width: Math.floor(viewport.width),
       height: Math.floor(viewport.height),

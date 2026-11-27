@@ -1,3 +1,5 @@
+using System.Text;
+using AngleSharp.Dom;
 using CoffeeReader.Application.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -43,17 +45,17 @@ public sealed class EpubContentProvider : IEbookContentProvider, IDisposable
             }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         })!;
 
-    public async Task<string> GetChapterTextAsync(string fullPath, string fileHash, string chapterHref, CancellationToken cancellationToken)
+    public async Task<ChapterText> GetChapterTextAsync(string fullPath, string fileHash, string chapterHref, CancellationToken cancellationToken)
     {
         var key = $"text:{fileHash}:{chapterHref}";
-        if (_cache.TryGetValue(key, out string? cached) && cached is not null)
+        if (_cache.TryGetValue(key, out ChapterText? cached) && cached is not null)
         {
             return cached;
         }
 
         var chapter = await GetChapterAsync(fullPath, fileHash, chapterHref, cancellationToken);
-        var text = ChapterText(chapter.BodyHtml);
-        _cache.Set(key, text, new MemoryCacheEntryOptions { Size = text.Length * sizeof(char), SlidingExpiration = TimeSpan.FromMinutes(30) });
+        var text = ExtractText(chapter.BodyHtml);
+        _cache.Set(key, text, new MemoryCacheEntryOptions { Size = (text.Text.Length * sizeof(char)) + (text.BlockBreaks.Count * sizeof(int)), SlidingExpiration = TimeSpan.FromMinutes(30) });
         return text;
     }
 
@@ -76,12 +78,57 @@ public sealed class EpubContentProvider : IEbookContentProvider, IDisposable
 
     public void Dispose() => _cache.Dispose();
 
+    private static readonly HashSet<string> BlockElements = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "p", "div", "section", "article", "aside", "header", "footer", "blockquote", "li", "ul", "ol", "dl", "dt", "dd",
+        "h1", "h2", "h3", "h4", "h5", "h6", "table", "tr", "td", "th", "pre", "figure", "figcaption", "hr", "br", "nav",
+    };
+
     /// <summary>The text a browser would produce for the chapter body (its <c>textContent</c>).</summary>
-    internal static string ChapterText(string bodyHtml)
+    internal static string ChapterText(string bodyHtml) => ExtractText(bodyHtml).Text;
+
+    internal static ChapterText ExtractText(string bodyHtml)
     {
         var document = XhtmlLoader.CreateEmptyDocument();
         document.Body!.InnerHtml = bodyHtml;
-        return document.Body.TextContent;
+        var builder = new StringBuilder();
+        var breaks = new List<int>();
+
+        void Mark()
+        {
+            if (breaks.Count == 0 || breaks[^1] != builder.Length)
+            {
+                breaks.Add(builder.Length);
+            }
+        }
+
+        void Walk(INode node)
+        {
+            foreach (var child in node.ChildNodes)
+            {
+                if (child is IText text)
+                {
+                    builder.Append(text.Data);
+                }
+                else if (child is IElement element)
+                {
+                    var block = BlockElements.Contains(element.LocalName);
+                    if (block)
+                    {
+                        Mark();
+                    }
+
+                    Walk(element);
+                    if (block)
+                    {
+                        Mark();
+                    }
+                }
+            }
+        }
+
+        Walk(document.Body);
+        return new ChapterText(builder.ToString(), breaks);
     }
 
     internal static ChapterDocument RenderChapter(string fullPath, string chapterHref)

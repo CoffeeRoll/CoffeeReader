@@ -12,6 +12,16 @@ using Microsoft.AspNetCore.ResponseCompression;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Relative storage paths (used in development) are relative to the app, not the shell's directory.
+foreach (var key in new[] { "Storage:LibraryPath", "Storage:DataPath" })
+{
+    var path = builder.Configuration[key];
+    if (!string.IsNullOrWhiteSpace(path) && !Path.IsPathRooted(path))
+    {
+        builder.Configuration[key] = Path.GetFullPath(Path.Combine(builder.Environment.ContentRootPath, path));
+    }
+}
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddCookieSessions();

@@ -1,0 +1,31 @@
+# CoffeeReader — self-hosted ebook library and reader.
+#
+#   mkdir -p books config
+#   docker compose up -d
+#
+# Then open http://localhost:8080 and create the administrator account.
+
+services:
+  coffeereader:
+    build: .
+    image: coffeereader:latest
+    container_name: coffeereader
+    # Run as the owner of ./books and ./config (check with `id -u` / `id -g`).
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Your ebooks. Drop .epub files in here (any folder structure) or upload them in the app.
+      # Add ":ro" to mount read-only; reading works, uploads and deletes are disabled.
+      - ./books:/books
+      # Database, cover thumbnails and sign-in keys. Back this folder up.
+      - ./config:/config
+    environment:
+      TZ: "Etc/UTC"
+      # How often to rescan the library as a fallback to change detection (minutes, 0 = off).
+      LibraryScan__IntervalMinutes: "60"
+      # Largest file accepted by uploads, in megabytes.
+      Uploads__MaxFileSizeMb: "512"
+      # Set to "true" when running behind a reverse proxy (Caddy, Traefik, nginx, ...).
+      ReverseProxy__TrustForwardedHeaders: "false"
+    restart: unless-stopped

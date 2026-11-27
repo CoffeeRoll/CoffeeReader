@@ -120,6 +120,14 @@ export class Paginator {
     const doc = this.iframe.contentDocument;
     if (!doc?.body) return false;
     this.doc = doc;
+
+    // The window may have been resized while the chapter loaded; lay out for the current size.
+    const current = this.layout ?? layout;
+    if (current !== layout) {
+      doc.getElementById("cr-typography")!.textContent = current.css;
+      doc.getElementById("cr-layout")!.textContent = this.layoutCss(current);
+    }
+
     await this.waitForFonts(doc);
     if (token !== this.loadToken) return false;
 
@@ -220,7 +228,7 @@ export class Paginator {
     return `<!DOCTYPE html><html${lang} dir="${this.dir}"><head><meta charset="utf-8"><base href="${escape(base)}">` +
       `<style>${readerFontFaces}</style>${stylesheets}${inlineStyles}` +
       `<style id="cr-typography">${layout.css}</style><style id="cr-layout">${this.layoutCss(layout)}</style>` +
-      `</head><body${bodyAttributes}>${chapter.html}<div id="cr-end"></div></body></html>`;
+      `</head><body${bodyAttributes}>${absolutizeUrls(chapter.html, new URL(base, window.location.href))}<div id="cr-end"></div></body></html>`;
   }
 
   private layoutCss(layout: PageLayout): string {
@@ -630,6 +638,48 @@ export class Paginator {
       this.settleTimer = window.setTimeout(() => report(true), TURN_MS + 20);
     }
   }
+}
+
+const urlAttributes = ["src", "href", "xlink:href", "poster"];
+
+/**
+ * Resolves every resource and link URL in the chapter against the book's location. Browsers'
+ * speculative loaders don't always honour <base> in a srcdoc document, so relative URLs would
+ * otherwise be fetched from the wrong place first. Parsing with DOMParser loads nothing.
+ */
+function absolutizeUrls(html: string, base: URL): string {
+  const parsed = new DOMParser().parseFromString(`<!DOCTYPE html><body>${html}</body>`, "text/html");
+  const resolve = (value: string) => {
+    if (value.startsWith("#")) return value;
+    try {
+      return new URL(value, base).href;
+    } catch {
+      return value;
+    }
+  };
+
+  for (const element of parsed.body.querySelectorAll("*")) {
+    for (const name of urlAttributes) {
+      const value = element.getAttribute(name);
+      if (value) element.setAttribute(name, resolve(value.trim()));
+    }
+
+    const srcset = element.getAttribute("srcset");
+    if (srcset) {
+      element.setAttribute(
+        "srcset",
+        srcset
+          .split(",")
+          .map((candidate) => {
+            const [url, ...descriptor] = candidate.trim().split(/\s+/);
+            return [resolve(url), ...descriptor].join(" ");
+          })
+          .join(", "),
+      );
+    }
+  }
+
+  return parsed.body.innerHTML;
 }
 
 const replacedElements = new Set(["IMG", "SVG", "VIDEO", "AUDIO", "CANVAS", "OBJECT", "HR", "IMAGE", "MATH"]);

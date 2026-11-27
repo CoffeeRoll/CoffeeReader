@@ -70,7 +70,18 @@ public sealed class LibraryImporter(
         }
 
         using var _ = await libraryLock.AcquireAsync(cancellationToken);
-        var relativePath = await files.SaveUploadAsync(content, fileName, cancellationToken);
+        string relativePath;
+        try
+        {
+            relativePath = await files.SaveUploadAsync(content, fileName, cancellationToken);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
+        {
+            logger.LogError(ex, "Couldn't save an upload to the library folder");
+            return new UploadResultDto(fileName, UploadStatus.Failed, null, null,
+                "The library folder isn't writable, so uploads can't be saved. Check the books volume's permissions.");
+        }
+
         try
         {
             var file = files.GetFile(relativePath) ?? throw new IOException("The uploaded file could not be read back.");

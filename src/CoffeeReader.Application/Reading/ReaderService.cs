@@ -82,14 +82,15 @@ public sealed class ReaderService(
 
         foreach (var chapter in book.Chapters.OrderBy(c => c.Index))
         {
-            var text = await content.GetChapterTextAsync(fullPath, book.FileHash, chapter.Href, cancellationToken);
+            var chapterText = await content.GetChapterTextAsync(fullPath, book.FileHash, chapter.Href, cancellationToken);
+            var text = chapterText.Text;
             var occurrence = 0;
             foreach (var match in TextSearcher.FindAll(text, query))
             {
                 total++;
                 if (hits.Count < MaxHits)
                 {
-                    var snippet = TextSearcher.CreateSnippet(text, match);
+                    var snippet = TextSearcher.CreateSnippet(text, match, chapterText.BlockBreaks);
                     var withinChapter = text.Length == 0 ? 0 : (double)match.Start / text.Length;
                     hits.Add(new SearchHitDto(
                         chapter.Index,

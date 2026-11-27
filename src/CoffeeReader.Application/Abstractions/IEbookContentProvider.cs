@@ -9,7 +9,7 @@ public interface IEbookContentProvider
     Task<ChapterDocument> GetChapterAsync(string fullPath, string fileHash, string chapterHref, CancellationToken cancellationToken);
 
     /// <summary>Returns the plain text of a chapter exactly as the reader will display it.</summary>
-    Task<string> GetChapterTextAsync(string fullPath, string fileHash, string chapterHref, CancellationToken cancellationToken);
+    Task<ChapterText> GetChapterTextAsync(string fullPath, string fileHash, string chapterHref, CancellationToken cancellationToken);
 
     /// <summary>Opens an embedded resource (image, stylesheet, font). Returns null when it doesn't exist.</summary>
     Task<BookResource?> OpenResourceAsync(string fullPath, string resourcePath, CancellationToken cancellationToken);
@@ -25,5 +25,11 @@ public sealed record ChapterDocument(
     string? BodyStyle,
     string? Language,
     string? Direction);
+
+/// <summary>
+/// A chapter's text (its DOM <c>textContent</c>) plus the offsets where block elements begin or end,
+/// so snippets can show paragraph breaks as spaces without shifting match positions.
+/// </summary>
+public sealed record ChapterText(string Text, IReadOnlyList<int> BlockBreaks);
 
 public sealed record BookResource(byte[] Content, string ContentType);

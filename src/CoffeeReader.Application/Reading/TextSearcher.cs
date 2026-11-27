@@ -94,18 +94,44 @@ public static class TextSearcher
         }
     }
 
-    public static Snippet CreateSnippet(string text, Match match, int context = 70)
+    public static Snippet CreateSnippet(string text, Match match, IReadOnlyList<int>? blockBreaks = null, int context = 70)
     {
         var beforeStart = Math.Max(0, match.Start - context);
-        var before = text[beforeStart..match.Start];
+        var afterEnd = Math.Min(text.Length, match.Start + match.Length + context);
+        if (blockBreaks is { Count: > 0 })
+        {
+            // Show paragraph and heading boundaries as spaces ("coin. Nobody", not "coin.Nobody").
+            var breaks = blockBreaks.Where(b => b > beforeStart && b < afterEnd).ToHashSet();
+            string Slice(int from, int to)
+            {
+                var builder = new StringBuilder(to - from + 8);
+                for (var i = from; i < to; i++)
+                {
+                    if (breaks.Contains(i))
+                    {
+                        builder.Append(' ');
+                    }
+
+                    builder.Append(text[i]);
+                }
+
+                return builder.ToString();
+            }
+
+            return Finish(text, Slice(beforeStart, match.Start), beforeStart, Slice(match.Start, match.Start + match.Length), Slice(match.Start + match.Length, afterEnd), afterEnd);
+        }
+
+        return Finish(text, text[beforeStart..match.Start], beforeStart, text.Substring(match.Start, match.Length), text[(match.Start + match.Length)..afterEnd], afterEnd);
+    }
+
+    private static Snippet Finish(string text, string before, int beforeStart, string matched, string after, int afterEnd)
+    {
         if (beforeStart > 0)
         {
             var space = before.IndexOf(' ');
             before = "…" + (space >= 0 && space < before.Length - 1 ? before[(space + 1)..] : before);
         }
 
-        var afterEnd = Math.Min(text.Length, match.Start + match.Length + context);
-        var after = text[(match.Start + match.Length)..afterEnd];
         if (afterEnd < text.Length)
         {
             var space = after.LastIndexOf(' ');
@@ -114,7 +140,7 @@ public static class TextSearcher
 
         return new Snippet(
             Collapse(before).TrimStart(),
-            Collapse(text.Substring(match.Start, match.Length)),
+            Collapse(matched),
             Collapse(after).TrimEnd());
     }
 
