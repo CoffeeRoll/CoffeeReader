@@ -1,0 +1,140 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  animation: fade 0.15s ease;
+}
+
+.dropTarget {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: min(560px, 100%);
+  padding: 56px 24px;
+  border: 2.5px dashed var(--accent);
+  border-radius: 28px;
+  background: var(--surface);
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.dropTarget svg {
+  width: 44px;
+  height: 44px;
+  color: var(--accent);
+}
+
+.dropTitle {
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.panel {
+  position: fixed;
+  z-index: 1500;
+  right: 16px;
+  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 12px);
+  width: min(380px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: fade 0.2s ease;
+}
+
+@media (min-width: 900px) {
+  .panel {
+    right: 24px;
+    bottom: 24px;
+  }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 8px 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.list {
+  max-height: 280px;
+  margin: 0;
+  padding: 6px 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 8px 16px;
+}
+
+.item svg {
+  width: 18px;
+  height: 18px;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.detail {
+  grid-column: 2;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.detail a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.bar {
+  grid-column: 2;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.ok {
+  color: var(--success);
+}
+
+.warn {
+  color: var(--text-muted);
+}
+
+.fail {
+  color: var(--danger);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}

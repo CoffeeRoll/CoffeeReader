@@ -117,6 +117,7 @@ public sealed class EpubContentProvider : IEbookContentProvider, IDisposable
         var direction = body?.GetAttribute("dir") ?? html?.GetAttribute("dir");
         var bodyId = body?.GetAttribute("id");
         var bodyClass = body?.GetAttribute("class");
+        var bodyStyle = ChapterSanitizer.SanitizeInlineStyle(body?.GetAttribute("style"));
 
         ChapterSanitizer.Sanitize(document);
 
@@ -127,6 +128,7 @@ public sealed class EpubContentProvider : IEbookContentProvider, IDisposable
             inlineStyles,
             Attribute(bodyId),
             Attribute(bodyClass),
+            bodyStyle,
             Attribute(language),
             direction is "rtl" or "ltr" ? direction : null);
     }

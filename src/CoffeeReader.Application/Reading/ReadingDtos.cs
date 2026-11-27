@@ -30,6 +30,7 @@ public sealed record ChapterDto(
     IReadOnlyList<string> InlineStyles,
     string? BodyId,
     string? BodyClass,
+    string? BodyStyle,
     string? Language,
     string? Direction);
 

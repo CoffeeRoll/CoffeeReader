@@ -1,0 +1,139 @@
+.wrapper {
+  position: relative;
+  min-width: 0;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  -webkit-touch-callout: none;
+}
+
+.coverWrap {
+  position: relative;
+  transition: transform 0.18s ease;
+}
+
+.card:hover .coverWrap {
+  transform: translateY(-3px);
+}
+
+.meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.author {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  position: absolute;
+  z-index: 3;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.seriesTag {
+  position: absolute;
+  z-index: 3;
+  left: 6px;
+  bottom: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(20, 12, 6, 0.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  backdrop-filter: blur(4px);
+}
+
+.progress {
+  position: absolute;
+  z-index: 3;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+}
+
+.menuButton {
+  position: absolute;
+  z-index: 4;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(20, 12, 6, 0.6);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+
+.menuButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.wrapper:hover .menuButton,
+.wrapper:focus-within .menuButton,
+.menuButton[aria-expanded="true"] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .menuButton {
+    opacity: 0.85;
+  }
+}

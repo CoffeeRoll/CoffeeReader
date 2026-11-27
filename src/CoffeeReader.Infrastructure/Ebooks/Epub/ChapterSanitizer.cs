@@ -97,6 +97,30 @@ internal static class ChapterSanitizer
             .Replace("expression(", "x(", StringComparison.OrdinalIgnoreCase)
             .Replace("javascript:", "x:", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Keeps simple presentational declarations from a body's style attribute (e.g. centring a cover);
+    /// anything that could load or run something is dropped.
+    /// </summary>
+    public static string? SanitizeInlineStyle(string? style)
+    {
+        if (string.IsNullOrWhiteSpace(style) || style.Length > 1000)
+        {
+            return null;
+        }
+
+        var safe = style.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(declaration => declaration.Contains(':')
+                && !declaration.Contains("url(", StringComparison.OrdinalIgnoreCase)
+                && !declaration.Contains("expression", StringComparison.OrdinalIgnoreCase)
+                && !declaration.Contains("javascript", StringComparison.OrdinalIgnoreCase)
+                && !declaration.Contains("behavior", StringComparison.OrdinalIgnoreCase)
+                && !declaration.Contains('<')
+                && !declaration.Contains('"')
+                && !declaration.Contains('\\'))
+            .ToList();
+        return safe.Count == 0 ? null : string.Join("; ", safe);
+    }
+
     public static bool IsInside(IElement element, string tagName)
     {
         for (var current = element.ParentElement; current is not null; current = current.ParentElement)

@@ -128,6 +128,15 @@ public class ChapterRenderingTests
         Assert.Equal(expected, EpubPackage.ResolvePath(directory, href));
 
     [Fact]
+    public void Keeps_safe_body_styles_only()
+    {
+        var chapter = EpubContentProvider.Render(
+            "<html><body style=\"margin:0; text-align:center; background:url(javascript:alert(1))\"><img src=\"c.jpg\"/></body></html>",
+            "cover.xhtml");
+        Assert.Equal("margin:0; text-align:center", chapter.BodyStyle);
+    }
+
+    [Fact]
     public void Inline_styles_cannot_close_the_style_element() =>
         Assert.DoesNotContain("</style>", ChapterSanitizer.SanitizeCss("p{} </style><script>alert(1)</script>"));
 }

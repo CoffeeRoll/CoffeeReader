@@ -51,6 +51,7 @@ public sealed class ReaderService(
             document.InlineStyles,
             document.BodyId,
             document.BodyClass,
+            document.BodyStyle,
             document.Language ?? book.Language,
             document.Direction);
     }
