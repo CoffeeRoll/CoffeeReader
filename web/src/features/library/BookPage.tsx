@@ -7,7 +7,7 @@ import type { BookDetails } from "../../api/types";
 import { BookCover } from "../../components/BookCover";
 import { Dialog } from "../../components/Dialog";
 import { useToast } from "../../components/Toaster";
-import { fileSize, formatIndex, formatLabels, percent, timeAgo } from "../../lib/format";
+import { authorsFieldSeparator, authorsParts, fileSize, formatIndex, formatLabels, percent, splitAuthorsField, timeAgo } from "../../lib/format";
 import { useShelfActions } from "./shelfActions";
 import { ShelfNameDialog } from "./ShelfNameDialog";
 import styles from "./BookPage.module.css";
@@ -75,12 +75,15 @@ export function BookPage() {
             <p className={styles.authors}>
               {book.authors.length === 0
                 ? "Unknown author"
-                : book.authors.map((author, i) => (
-                    <span key={author.id}>
-                      {i > 0 && " & "}
-                      <Link to={`/library?q=${encodeURIComponent(author.name)}`}>{author.name}</Link>
-                    </span>
-                  ))}
+                : authorsParts(book.authors.map((a) => a.name)).map((part, i) =>
+                    part.name ? (
+                      <Link key={i} to={`/library?q=${encodeURIComponent(part.value)}`}>
+                        {part.value}
+                      </Link>
+                    ) : (
+                      <span key={i}>{part.value}</span>
+                    ),
+                  )}
             </p>
           </div>
 
@@ -233,7 +236,7 @@ function EditBookDialog({ book, open, onClose }: { book: BookDetails; open: bool
     try {
       await update.mutateAsync({
         title: form.title.trim(),
-        authors: form.authors.split(/[;&]/).map((a) => a.trim()).filter(Boolean),
+        authors: splitAuthorsField(form.authors),
         series: blank(form.series),
         seriesIndex: form.seriesIndex.trim() ? Number(form.seriesIndex) : null,
         description: blank(form.description),
@@ -257,8 +260,8 @@ function EditBookDialog({ book, open, onClose }: { book: BookDetails; open: bool
           <input className="input" value={form.title} onChange={set("title")} required />
         </label>
         <label className={`field ${styles.span2}`}>
-          <span>Authors (separate with “;”)</span>
-          <input className="input" value={form.authors} onChange={set("authors")} />
+          <span>Authors (separate people with “;”)</span>
+          <input className="input" value={form.authors} onChange={set("authors")} placeholder="Jane Smith; John Doe" />
         </label>
         <label className="field">
           <span>Series</span>
@@ -307,7 +310,7 @@ function EditBookDialog({ book, open, onClose }: { book: BookDetails; open: bool
 function toForm(book: BookDetails) {
   return {
     title: book.title,
-    authors: book.authors.map((a) => a.name).join("; "),
+    authors: book.authors.map((a) => a.name).join(authorsFieldSeparator),
     series: book.series?.name ?? "",
     seriesIndex: book.seriesIndex === null ? "" : String(book.seriesIndex),
     description: book.description ?? "",
