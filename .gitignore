@@ -424,3 +424,11 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# CoffeeReader
+.dev/
+web/node_modules/
+web/dist/
+src/CoffeeReader.Api/wwwroot/*
+!src/CoffeeReader.Api/wwwroot/.gitkeep
+web/public/pdfjs/

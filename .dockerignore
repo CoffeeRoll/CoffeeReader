@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+src/CoffeeReader.Api/wwwroot/*
+.dev/
+.git/
+.github/
+.vs/
+.vscode/
+.idea/
+*.md
+!README.md
+**/*.user
+docker-compose*.yml

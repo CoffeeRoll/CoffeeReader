@@ -1,0 +1,202 @@
+.layout {
+  display: grid;
+  gap: 28px;
+}
+
+@media (min-width: 760px) {
+  .layout {
+    grid-template-columns: minmax(220px, 300px) 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+}
+
+.coverColumn {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+
+.cover {
+  width: min(240px, 62vw);
+}
+
+@media (min-width: 760px) {
+  .cover {
+    width: 100%;
+  }
+
+  .coverColumn {
+    position: sticky;
+    top: calc(var(--header-height) + 24px);
+  }
+}
+
+.info {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.series {
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.title {
+  font-family: var(--font-serif);
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 600;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.authors {
+  font-size: 17px;
+  color: var(--text-muted);
+}
+
+.authors a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.authors a:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.progressCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.progressTop {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.description {
+  max-width: 68ch;
+  font-family: var(--font-serif);
+  font-size: 16.5px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.shelves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shelfChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shelfChip[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.shelfChip svg {
+  width: 15px;
+  height: 15px;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.details dt {
+  color: var(--text-muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.formatBadge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.formatBadge[data-format="pdf"] {
+  background: #a8261c;
+  color: #fff;
+}
+
+.formatBadge[data-format="mobi"] {
+  background: #b27006;
+  color: #fff;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.formGrid {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 600px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .span2 {
+    grid-column: span 2;
+  }
+}

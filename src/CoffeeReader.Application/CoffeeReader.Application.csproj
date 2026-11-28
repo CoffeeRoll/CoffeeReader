@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\CoffeeReader.Domain\CoffeeReader.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Application services query through the IApplicationDbContext abstraction (DbSet/LINQ only). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CoffeeReader.Tests" />
+  </ItemGroup>
+
+</Project>

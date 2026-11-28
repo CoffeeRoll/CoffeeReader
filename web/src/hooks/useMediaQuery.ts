@@ -1,0 +1,16 @@
+import { useSyncExternalStore } from "react";
+
+export function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia(query);
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
+}
+
+export const useIsDesktop = () => useMediaQuery("(min-width: 900px)");
+export const useHasFinePointer = () => useMediaQuery("(hover: hover) and (pointer: fine)");
