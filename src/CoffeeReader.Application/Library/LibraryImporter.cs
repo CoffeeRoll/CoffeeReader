@@ -135,6 +135,13 @@ public sealed class LibraryImporter(
                 {
                     if (existing.FileSize == file.SizeBytes && existing.FileModifiedAt == file.ModifiedAt && !existing.IsMissing)
                     {
+                        // Unchanged, but read by an older parser: read it again so fixes apply.
+                        if (FindParser(Path.GetExtension(file.RelativePath)) is { } current && existing.ParserVersion < current.MetadataVersion)
+                        {
+                            await ReimportAsync(existing, file, existing.FileHash, cancellationToken);
+                            updated++;
+                        }
+
                         continue;
                     }
 
@@ -212,6 +219,7 @@ public sealed class LibraryImporter(
 
         var book = new Book(new BookFile(file.RelativePath, file.SizeBytes, file.ModifiedAt, hash, parser.Format), Now);
         await ApplyAsync(book, parsed, applyMetadata: true, cancellationToken);
+        book.RecordParserVersion(parser.MetadataVersion);
         db.Books.Add(book);
         await db.SaveChangesAsync(cancellationToken);
         await SaveCoverAsync(book, parsed, cancellationToken);
@@ -230,6 +238,7 @@ public sealed class LibraryImporter(
         await db.Books.Entry(book).Collection(b => b.Authors).LoadAsync(cancellationToken);
         book.UpdateFile(new BookFile(file.RelativePath, file.SizeBytes, file.ModifiedAt, hash, parser.Format), Now);
         await ApplyAsync(book, parsed, applyMetadata: !book.MetadataLocked, cancellationToken);
+        book.RecordParserVersion(parser.MetadataVersion);
         await db.SaveChangesAsync(cancellationToken);
         await SaveCoverAsync(book, parsed, cancellationToken);
     }

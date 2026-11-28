@@ -170,7 +170,9 @@ How the main pieces work:
 - **Library scanning.** The books folder is the source of truth for *which* books exist. Each file
   is identified by its SHA-256 hash, so a moved or renamed file keeps its identity and a copy of an
   existing book is reported instead of imported twice. A file-system watcher, a periodic scan and
-  an on-demand scan all feed one background queue, and imports never run concurrently.
+  an on-demand scan all feed one background queue, and imports never run concurrently. When an
+  update improves how a format is read, books already in the library are read again once on the
+  next scan (details an administrator edited are kept).
 - **Reading.** The server parses each chapter (tolerating the sloppy XHTML found in real EPUBs),
   strips anything executable with an allow-list sanitizer, and returns the body and stylesheets.
   The browser renders it in a same-origin iframe laid out with CSS multi-column: one column per page,

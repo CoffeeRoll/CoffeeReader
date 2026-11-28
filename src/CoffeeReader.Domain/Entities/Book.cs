@@ -72,6 +72,12 @@ public sealed class Book
     /// <summary>When true the metadata was edited by hand and rescans won't overwrite it.</summary>
     public bool MetadataLocked { get; private set; }
 
+    /// <summary>
+    /// The version of the format's parser that last read the file. Books read by an older version
+    /// are read again, so parser fixes reach books already in the library.
+    /// </summary>
+    public int ParserVersion { get; private set; }
+
     /// <summary>The file disappeared from the library folder. Kept so progress and shelves survive a move.</summary>
     public bool IsMissing { get; private set; }
 
@@ -127,6 +133,8 @@ public sealed class Book
     }
 
     public void UnlockMetadata() => MetadataLocked = false;
+
+    public void RecordParserVersion(int version) => ParserVersion = version;
 
     public void ReplaceStructure(IEnumerable<BookChapter> chapters, IEnumerable<TocEntry> tableOfContents, DateTime when)
     {

@@ -105,6 +105,9 @@ namespace CoffeeReader.Infrastructure.Persistence.Migrations
                     b.Property<bool>("MetadataLocked")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("ParserVersion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PublishedDate")
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");

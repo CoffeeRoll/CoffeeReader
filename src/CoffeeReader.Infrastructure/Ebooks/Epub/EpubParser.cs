@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AngleSharp.Dom;
 using CoffeeReader.Infrastructure.Ebooks.Html;
@@ -12,13 +11,16 @@ namespace CoffeeReader.Infrastructure.Ebooks.Epub;
 /// <summary>
 /// Reads metadata, reading order, table of contents and cover from EPUB 2 and EPUB 3 files.
 /// </summary>
-public sealed partial class EpubParser : IEbookParser
+public sealed class EpubParser : IEbookParser
 {
     private const int MaxCoverBytes = 25 * 1024 * 1024;
 
     public BookFormat Format => BookFormat.Epub;
 
     public IReadOnlyCollection<string> Extensions { get; } = [".epub"];
+
+    /// <summary>1: "&amp;" no longer splits names like "Black &amp; Decker" into two authors.</summary>
+    public int MetadataVersion => 1;
 
     public Task<ParsedEbook> ParseAsync(string fullPath, CancellationToken cancellationToken) =>
         Task.Run(() => Parse(fullPath), cancellationToken);
@@ -144,16 +146,12 @@ public sealed partial class EpubParser : IEbookParser
         var result = new List<ParsedAuthor>();
         foreach (var author in authors)
         {
-            var names = SplitAuthors(author.Name);
+            var names = AuthorNames.Split(author.Name);
             result.AddRange(names.Select(name => new ParsedAuthor(name, names.Count == 1 ? Clean(author.FileAs) : null)));
         }
 
         return result.Where(a => !a.Name.Equals("unknown", StringComparison.OrdinalIgnoreCase)).ToList();
     }
-
-    /// <summary>Some tools put several authors in one creator element ("A & B").</summary>
-    private static List<string> SplitAuthors(string value) =>
-        AuthorSeparator().Split(value).Select(v => v.Trim()).Where(v => v.Length > 0).ToList();
 
     private static (string? Name, double? Index) ReadSeries(XElement metadata, Dictionary<string, List<(string Property, string Value)>> refinements)
     {
@@ -506,7 +504,4 @@ public sealed partial class EpubParser : IEbookParser
         double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) && double.IsFinite(number) && number >= 0
             ? number
             : null;
-
-    [GeneratedRegex(@"\s*[&;]\s*", RegexOptions.CultureInvariant)]
-    private static partial Regex AuthorSeparator();
 }

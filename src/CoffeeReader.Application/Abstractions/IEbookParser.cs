@@ -11,6 +11,12 @@ public interface IEbookParser
 
     IReadOnlyCollection<string> Extensions { get; }
 
+    /// <summary>
+    /// Raise this when a change to the parser should be applied to books already in the library:
+    /// books read by an older version are read again on the next scan (edited details are kept).
+    /// </summary>
+    int MetadataVersion { get; }
+
     Task<ParsedEbook> ParseAsync(string fullPath, CancellationToken cancellationToken);
 }
 

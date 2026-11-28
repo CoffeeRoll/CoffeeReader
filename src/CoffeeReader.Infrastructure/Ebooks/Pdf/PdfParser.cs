@@ -17,6 +17,9 @@ public sealed partial class PdfParser : IEbookParser
 
     public IReadOnlyCollection<string> Extensions { get; } = [".pdf"];
 
+    /// <summary>1: "&amp;" no longer splits names like "Black &amp; Decker" into two authors.</summary>
+    public int MetadataVersion => 1;
+
     public Task<ParsedEbook> ParseAsync(string fullPath, CancellationToken cancellationToken) =>
         Task.Run(() => Parse(fullPath), cancellationToken);
 
@@ -37,9 +40,8 @@ public sealed partial class PdfParser : IEbookParser
             title = Path.GetFileNameWithoutExtension(fullPath).Replace('_', ' ');
         }
 
-        var authors = (document.MetaText("Author") ?? string.Empty)
-            .Split([';', '&'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(a => a.Length is > 0 and < 200)
+        var authors = AuthorNames.Split(document.MetaText("Author"))
+            .Where(a => a.Length < 200)
             .Select(a => new ParsedAuthor(a, null))
             .ToList();
 
