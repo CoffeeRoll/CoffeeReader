@@ -48,6 +48,7 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
   const navToken = useRef(0);
   const userNavigated = useRef(false);
   const tocPinned = isWide && settings.tocPinned;
+  const scrolled = settings.flow === "scrolled";
   const progress = useProgressSaver(bookId);
   useReaderDocument(manifest.title, theme.page);
 
@@ -56,15 +57,25 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
   const geometry = useMemo(() => {
     if (!stage) return null;
     const framed = stage.width >= 700 && stage.height >= 480;
-    const arrows = framed && finePointer ? 112 : 0;
+    const scroll = settings.flow === "scrolled";
+    // Page-turn arrows only make sense for pages; in scroll mode the wheel and scrollbar do the work.
+    const arrows = framed && finePointer && !scroll ? 112 : 0;
     const availableWidth = stage.width - (framed ? 48 : 0) - arrows;
     const availableHeight = stage.height - (framed ? 36 : 0);
-    const columns: 1 | 2 = settings.layout === "auto" && availableWidth >= 1000 && availableWidth > availableHeight * 1.2 ? 2 : 1;
+    const columns: 1 | 2 = !scroll && settings.layout === "auto" && availableWidth >= 1000 && availableWidth > availableHeight * 1.2 ? 2 : 1;
     const textWidth = maxPageWidth(settings);
     const margin = marginPx(settings.margin, Math.min(availableWidth / columns, textWidth + 120));
     let width = Math.floor(Math.min(availableWidth, columns * (textWidth + margin * 2)));
     if (columns === 2) width -= width % 2;
-    return { framed, columns, margin, width, height: Math.floor(availableHeight) };
+    // Scroll mode: a wider page with the text centred at the same comfortable width, so code with
+    // long lines can use the extra room.
+    let inset = margin;
+    if (scroll) {
+      width = Math.floor(Math.min(availableWidth, textWidth * 1.6 + margin * 2));
+      inset = Math.max(margin, Math.floor((width - textWidth) / 2));
+    }
+
+    return { framed, arrows: arrows > 0, columns, margin, inset, width, height: Math.floor(availableHeight) };
   }, [stage, settings, finePointer]);
 
   const layout = useMemo<PageLayout | null>(() => {
@@ -72,10 +83,12 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
     // Wait for the page frame to take its computed size before laying anything out.
     if (Math.abs(viewport.width - geometry.width) > 1) return null;
     return {
+      mode: settings.flow,
       width: Math.floor(viewport.width),
       height: Math.floor(viewport.height),
       columns: geometry.columns,
-      margin: geometry.margin,
+      margin: geometry.inset,
+      bleed: geometry.inset - geometry.margin,
       padding: 4,
       css: typographyCss(settings),
       animate: settings.animate,
@@ -96,6 +109,28 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
     [bookId, client],
   );
 
+  const neighbourChapter = useCallback(
+    (from: number, direction: 1 | -1): number | null => {
+      for (let i = from + direction; i >= 0 && i < manifest.chapters.length; i += direction) {
+        if (manifest.chapters[i].isLinear) return i;
+      }
+
+      return null;
+    },
+    [manifest],
+  );
+
+  /** Scroll mode ends each chapter with a button to the next one; this is its label. */
+  const nextChapterLabel = useCallback(
+    (index: number): string => {
+      const next = neighbourChapter(index, 1);
+      if (next === null) return "Finish the book";
+      const title = manifest.tableOfContents.find((entry) => entry.chapterIndex === next)?.title ?? manifest.chapters[next].title;
+      return title ? `Next: ${title}` : "Next chapter";
+    },
+    [manifest, neighbourChapter],
+  );
+
   const openChapter = useCallback(
     async (index: number, target: PageTarget) => {
       const paginator = paginatorRef.current;
@@ -108,7 +143,7 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
         if (token !== navToken.current) return;
         chapterRef.current = index;
         setChapterIndex(index);
-        await paginator.load(chapter, layoutRef.current!, target);
+        await paginator.load(chapter, layoutRef.current!, target, { nextLabel: nextChapterLabel(index) });
       } catch (error) {
         toast.error(error);
       } finally {
@@ -126,18 +161,7 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
         }
       }
     },
-    [manifest, fetchChapter, client, bookId, toast],
-  );
-
-  const neighbourChapter = useCallback(
-    (from: number, direction: 1 | -1): number | null => {
-      for (let i = from + direction; i >= 0 && i < manifest.chapters.length; i += direction) {
-        if (manifest.chapters[i].isLinear) return i;
-      }
-
-      return null;
-    },
-    [manifest],
+    [manifest, fetchChapter, client, bookId, toast, nextChapterLabel],
   );
 
   const goTo = useCallback(
@@ -170,8 +194,36 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
     [isDesktop, neighbourChapter, openChapter],
   );
 
-  const onWheel = useWheelTurns(turn);
-  const onKey = useReaderKeys(turn, setPanel, () => paginatorRef.current?.direction === "rtl");
+  /** Scroll mode: from the end of a chapter to the start of the next (or the end of the book). */
+  const finishChapter = useCallback(() => {
+    const current = chapterRef.current;
+    if (current === null) return;
+    userNavigated.current = true;
+    const next = neighbourChapter(current, 1);
+    if (next === null) setAtBookEnd(true);
+    else void openChapter(next, { kind: "fraction", value: 0 });
+  }, [neighbourChapter, openChapter]);
+
+  const wheelTurns = useWheelTurns(turn);
+  const onWheel = useCallback(
+    (event: WheelEvent) => {
+      if (!scrolled) return wheelTurns(event);
+      // Scrolling over the desk around the page scrolls the page.
+      event.preventDefault();
+      const delta = event.deltaY * (event.deltaMode === 1 ? 32 : event.deltaMode === 2 ? 600 : 1);
+      paginatorRef.current?.scrollBy(delta);
+    },
+    [scrolled, wheelTurns],
+  );
+  const scrollLine = useCallback(
+    (direction: 1 | -1) => {
+      if (!scrolled || !paginatorRef.current) return false;
+      paginatorRef.current.scrollBy(direction * 56, true);
+      return true;
+    },
+    [scrolled],
+  );
+  const onKey = useReaderKeys(turn, setPanel, () => paginatorRef.current?.direction === "rtl", scrollLine);
 
   const onLink = useCallback(
     (link: LinkTarget) => {
@@ -203,8 +255,8 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
   );
 
   // The paginator lives as long as the page; its callbacks always see the latest handlers.
-  const handlers = useRef({ onRelocate, onKey, onWheel, onLink, turn, panel, finePointer, tocPinned, neighbourChapter });
-  handlers.current = { onRelocate, onKey, onWheel, onLink, turn, panel, finePointer, tocPinned, neighbourChapter };
+  const handlers = useRef({ onRelocate, onKey, onWheel, onLink, turn, finishChapter, panel, finePointer, tocPinned, scrolled, neighbourChapter });
+  handlers.current = { onRelocate, onKey, onWheel, onLink, turn, finishChapter, panel, finePointer, tocPinned, scrolled, neighbourChapter };
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -214,12 +266,19 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
       onKey: (event) => handlers.current.onKey(event),
       onWheel: (event) => handlers.current.onWheel(event),
       onLink: (link) => handlers.current.onLink(link),
+      onChapterEnd: () => handlers.current.finishChapter(),
       onSwipe: (direction) => handlers.current.turn(direction),
       canLeave: (direction) => chapterRef.current !== null && handlers.current.neighbourChapter(chapterRef.current, direction) !== null,
       onTap: (zone) => {
-        const { panel: open, finePointer: mouse, tocPinned: pinned, turn: doTurn } = handlers.current;
+        const { panel: open, finePointer: mouse, tocPinned: pinned, scrolled: scrolling, turn: doTurn } = handlers.current;
         if (open && !(open === "toc" && pinned)) {
           setPanel(null);
+          return;
+        }
+
+        // Scroll mode: clicks are for selecting text; a tap on a touch screen shows or hides the toolbars.
+        if (scrolling) {
+          if (!mouse) setChromeVisible((visible) => !visible);
           return;
         }
 
@@ -275,6 +334,11 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
   );
   const chapterTitle = (tocIndex >= 0 ? manifest.tableOfContents[tocIndex]?.title : null) ?? chapter?.title ?? manifest.title;
   const pagesLeft = where ? where.pageCount - where.page - 1 : 0;
+  const footStart = scrolled
+    ? `${percent(where?.scrolled ?? 0)} of chapter`
+    : pagesLeft === 0
+      ? "Last page in chapter"
+      : `${pagesLeft} ${pagesLeft === 1 ? "page" : "pages"} left in chapter`;
 
   const selectToc = (entry: TocEntry) => {
     if (!tocPinned) setPanel(null);
@@ -331,7 +395,7 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
       }}
       stageRef={stageRef}
     >
-      {geometry?.framed && finePointer && (
+      {geometry?.arrows && (
         <button type="button" className={styles.turnButton} style={{ left: 12 }} onClick={() => turn(-1)} aria-label="Previous page">
           <ChevronLeft />
         </button>
@@ -351,7 +415,7 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
         }
       >
         {geometry?.columns === 2 && <div className={styles.spine} />}
-        <div className={styles.runningHead} style={{ height: geometry?.framed ? 44 : 36, padding: `0 ${geometry?.margin ?? 16}px` }}>
+        <div className={styles.runningHead} style={{ height: geometry?.framed ? 44 : 36, padding: `0 ${geometry?.inset ?? 16}px` }}>
           {geometry?.columns === 2 ? (
             <>
               <span>{manifest.title}</span>
@@ -369,17 +433,17 @@ export function EpubReader({ manifest }: { manifest: ReaderManifest }) {
             </div>
           )}
         </div>
-        <div className={styles.pageFoot} style={{ height: geometry?.framed ? 44 : 36, padding: `0 ${geometry?.margin ?? 16}px` }}>
+        <div className={styles.pageFoot} style={{ height: geometry?.framed ? 44 : 36, padding: `0 ${geometry?.inset ?? 16}px` }}>
           {where && (
             <>
-              <span>{pagesLeft === 0 ? "Last page in chapter" : `${pagesLeft} ${pagesLeft === 1 ? "page" : "pages"} left in chapter`}</span>
-              <span>{isDesktop ? `Page ${where.page + 1} of ${where.pageCount} · ${percent(overall)}` : percent(overall)}</span>
+              <span>{footStart}</span>
+              <span>{isDesktop && !scrolled ? `Page ${where.page + 1} of ${where.pageCount} · ${percent(overall)}` : percent(overall)}</span>
             </>
           )}
         </div>
       </div>
 
-      {geometry?.framed && finePointer && (
+      {geometry?.arrows && (
         <button type="button" className={styles.turnButton} style={{ right: 12 }} onClick={() => turn(1)} aria-label="Next page">
           <ChevronRight />
         </button>

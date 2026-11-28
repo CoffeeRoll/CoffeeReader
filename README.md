@@ -23,10 +23,10 @@ Reads **EPUB**, **MOBI** and **PDF**.
 | Pain point | CoffeeReader |
 | --- | --- |
 | Pages render as plain HTML with no page structure | Chapters are laid out as real **pages**: margins, running heads, page numbers, "pages left in chapter", a two-page spread on wide screens, and themes (Paper, Sepia, Dusk, Night) with comfortable line lengths. |
-| Turning pages needs small buttons or side areas | **Click or tap** the right side for the next page, the left for the previous one. **Swipe** on touch screens (the page follows your finger), **scroll** with a mouse wheel or trackpad (one flick, one page), or use the **keyboard**. |
+| Turning pages needs small buttons or side areas | **Click or tap** the right side for the next page, the left for the previous one. **Swipe** on touch screens (the page follows your finger), **scroll** with a mouse wheel or trackpad (one flick, one page), or use the **keyboard**. Prefer scrolling? **Scroll mode** shows each chapter as one long page, and code keeps its lines instead of wrapping across pages. |
 | Table of contents is hidden in a menu | The contents can be **pinned open beside the page** on larger screens and always highlights where you are. On phones it's one tap away. |
 | No search | **Full-text search inside a book**: results grouped by chapter with snippets; tap one to jump to the page with the words highlighted, then step through matches. Plus library search by title, author or series. |
-| Home page shows books in a single ungrouped row | The home page shows **Continue reading**, then **every shelf as a section of covers**. Drag books between shelves, reorder them, or drag shelves into order. The Library page sorts, filters and groups by **series** or **author**. |
+| Home page shows books in a single ungrouped row | The home page shows **Continue reading**, then **every shelf as a section of covers**. Drag books between shelves, reorder them, or drag shelves into order. While you drag, your shelves stay **docked at the bottom of the screen**, so books at the bottom of a long page can be shelved without scrolling. The Library page sorts, filters and groups by **series** or **author**. |
 
 Also:
 
@@ -47,8 +47,8 @@ Also:
 
 | Format | How it reads |
 | --- | --- |
-| **EPUB** (2 and 3) | Paginated, with all typography settings. |
-| **MOBI** (`.mobi`, `.azw`, `.prc`; Mobipocket / Kindle MOBI 6) | Converted on the fly into the same paginated reader as EPUB: chapters, contents, internal links, images, search and typography all work. Combined KindleGen files are read through their MOBI 6 part. |
+| **EPUB** (2 and 3) | Pages or scroll mode, with all typography settings. Uses the book's own fonts unless you pick one (books that don't set one get Literata). |
+| **MOBI** (`.mobi`, `.azw`, `.prc`; Mobipocket / Kindle MOBI 6) | Converted on the fly into the same reader as EPUB: chapters, contents, internal links, images, search and typography all work. Combined KindleGen files are read through their MOBI 6 part. |
 | **PDF** | Shown as real pages (PDF.js), one at a time or as book-style spreads, with the PDF's outline as contents. Choose *Whole page* or *Page width* (with zoom up to 300% for small text on phones), and optionally tint pages to match Sepia or invert them for the dark themes. Text can be selected and searched. |
 
 Every cover carries a small chip (**EPUB**, **MOBI**, **PDF**) so you can tell at a glance, the
@@ -130,10 +130,16 @@ The health check endpoint is `GET /health`.
 | Show or hide toolbars | Always shown | Tap the middle of the page |
 | Contents | `T`, or the list button (pin it to keep it open) | List button |
 | Search | `/`, or the magnifier | Magnifier |
-| Text, theme, margins, layout (PDF: fit, zoom, tint) | The **Aa** button | The **Aa** button |
+| Text, theme, margins, layout, pages or scroll (PDF: fit, zoom, tint) | The **Aa** button | The **Aa** button |
 
 In a PDF zoomed past the page width, scrolling and dragging pan the page; taps, keys and the arrow
 buttons still turn it.
+
+**Scroll mode** (EPUB and MOBI: **Aa** → *Reading mode* → *Scroll*) shows each chapter as one long page
+that scrolls with the wheel, trackpad, scrollbar or your finger. `↑` `↓` scroll a little, `Space` and
+`PageDown` a screen at a time, and the button at the end of a chapter (or `Space` there) opens the
+next one. Code keeps its line breaks: blocks too wide for the text get the page's full width, and
+anything wider still scrolls sideways. On touch screens a tap shows or hides the toolbars.
 
 Following a link in a book (for example a footnote) shows a **Back to where you were** button.
 Reading settings are saved per device, since a phone and a monitor usually want different sizes.
@@ -168,8 +174,9 @@ How the main pieces work:
 - **Reading.** The server parses each chapter (tolerating the sloppy XHTML found in real EPUBs),
   strips anything executable with an allow-list sanitizer, and returns the body and stylesheets.
   The browser renders it in a same-origin iframe laid out with CSS multi-column: one column per page,
-  or two for a spread. Page turns are GPU transforms. Positions are stored as a character offset
-  into the chapter, which is why reflowing text keeps you on the same sentence.
+  or two for a spread. Page turns are GPU transforms. Scroll mode uses the same iframe as a single
+  scrolling column. Positions are stored as a character offset into the chapter, which is why
+  reflowing text, or switching between pages and scrolling, keeps you on the same sentence.
 - **Formats.** Each format plugs in a parser (metadata, reading order, contents, cover) and a
   content provider. MOBI is decompressed (PalmDOC or Huffman/CDIC) and split at its page breaks
   into HTML chapters; `filepos` links become anchors and image records become resources, so MOBI
@@ -194,12 +201,18 @@ and macOS); PDF.js's fonts and decoders are copied into `web/public/pdfjs` by `n
 dotnet run --project src/CoffeeReader.Api
 ```
 
-```bash
-cd web && npm install && npm run dev
-```
+Open <http://localhost:5200>. `dotnet build` (and so `dotnet run`) also builds the React app and copies
+it into `src/CoffeeReader.Api/wwwroot`: `npm ci` runs when the lockfile changes and `npm run build`
+when anything in `web/` changes, so TypeScript errors show up in the build output too. Pass
+`-p:SkipWebBuild=true` to skip it; without Node.js it's skipped with a message. Development data lives
+in `.dev/books` and `.dev/config`.
 
-The API listens on <http://localhost:5200> and stores data in `.dev/books` and `.dev/config`. Vite
-serves the app on <http://localhost:5173> and proxies `/api` to the API.
+For instant reloads while working on the frontend, also run the Vite dev server and use
+<http://localhost:5173> instead (it proxies `/api` to the API):
+
+```bash
+cd web && npm run dev
+```
 
 Tests:
 

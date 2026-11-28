@@ -5,6 +5,8 @@ export type ReaderFont = "publisher" | "literata" | "atkinson" | "georgia" | "sa
 export type TextAlign = "publisher" | "left" | "justify";
 export type PageLayout = "auto" | "single";
 export type PdfFit = "page" | "width";
+/** Reflowable books: turn pages, or scroll each chapter as one long column. */
+export type ReadingFlow = "paginated" | "scrolled";
 
 export interface ReaderSettings {
   theme: ReaderTheme;
@@ -14,6 +16,7 @@ export interface ReaderSettings {
   margin: 0 | 1 | 2 | 3;
   align: TextAlign;
   layout: PageLayout;
+  flow: ReadingFlow;
   tocPinned: boolean;
   animate: boolean;
   /** PDFs: show whole pages, or fill the width and scroll. */
@@ -45,12 +48,13 @@ const isPhone = typeof window !== "undefined" && window.matchMedia("(max-width: 
 
 export const defaultSettings: ReaderSettings = {
   theme: "paper",
-  font: "literata",
+  font: "publisher",
   fontSize: isPhone ? 18 : 20,
   lineHeight: 1.6,
   margin: 1,
   align: "justify",
   layout: "auto",
+  flow: "paginated",
   tocPinned: true,
   animate: true,
   pdfFit: "page",
@@ -97,9 +101,15 @@ export function typographyCss(settings: ReaderSettings): string {
     `::selection { background: ${theme.highlight}; }`,
     `::highlight(cr-search) { background-color: ${theme.highlight}; color: inherit; }`,
     `mark.cr-search { background-color: ${theme.highlight}; color: inherit; border-radius: 2px; }`,
-    `pre, code, kbd, samp { white-space: pre-wrap; font-size: 0.9em; }`,
+    `pre, code, kbd, samp { font-size: 0.9em; }`,
     `table { max-width: 100%; border-collapse: collapse; }`,
   ];
+
+  if (!font) {
+    // "Book's font": keep whatever the book specifies. :where() has zero specificity, so this only
+    // applies to books that don't set a font (common in MOBI files), instead of the browser default.
+    rules.push(`:where(html) { font-family: ${fonts.literata.stack}; }`);
+  }
 
   if (font) {
     rules.push(`body, body p, body div, body span, body li, body blockquote, body td, body th, body dd, body dt, body a, body em, body i, body strong, body b, body small, body h1, body h2, body h3, body h4, body h5, body h6 { font-family: ${font} !important; }`);

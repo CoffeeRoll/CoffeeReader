@@ -24,11 +24,12 @@ COPY Directory.Build.props Directory.Packages.props CoffeeReader.slnx ./
 COPY src/CoffeeReader.Domain/CoffeeReader.Domain.csproj src/CoffeeReader.Domain/
 COPY src/CoffeeReader.Application/CoffeeReader.Application.csproj src/CoffeeReader.Application/
 COPY src/CoffeeReader.Infrastructure/CoffeeReader.Infrastructure.csproj src/CoffeeReader.Infrastructure/
-COPY src/CoffeeReader.Api/CoffeeReader.Api.csproj src/CoffeeReader.Api/
+COPY src/CoffeeReader.Api/CoffeeReader.Api.csproj src/CoffeeReader.Api/WebApp.targets src/CoffeeReader.Api/
 RUN dotnet restore src/CoffeeReader.Api/CoffeeReader.Api.csproj -r "$(cat /tmp/rid)"
 COPY src/ src/
+# The web app is built in its own stage above, so skip the API project's built-in web build.
 RUN dotnet publish src/CoffeeReader.Api/CoffeeReader.Api.csproj -c Release -r "$(cat /tmp/rid)" --self-contained false \
-      -o /app --no-restore -p:UseAppHost=false
+      -o /app --no-restore -p:UseAppHost=false -p:SkipWebBuild=true
 
 # ---- Runtime ------------------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
