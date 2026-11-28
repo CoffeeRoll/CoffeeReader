@@ -3,7 +3,7 @@ import { useState, type ReactNode, type RefObject } from "react";
 import { Link } from "react-router";
 import type { ReaderManifest, SearchHit, TocEntry } from "../../api/types";
 import { useIsDesktop, useMediaQuery } from "../../hooks/useMediaQuery";
-import { percent } from "../../lib/format";
+import { authorsText, percent } from "../../lib/format";
 import type { Panel } from "./readerHooks";
 import { themes, type ReaderSettings } from "./readerSettings";
 import { SearchPanel, type SearchState } from "./SearchPanel";
@@ -96,7 +96,7 @@ export function ReaderShell(props: Props) {
         </button>
         <div className={styles.titleBlock}>
           <span className={styles.bookTitle}>{manifest.title}</span>
-          <span className={styles.chapterTitle}>{manifest.authors.join(", ")}</span>
+          <span className={styles.chapterTitle}>{authorsText(manifest.authors, { fallback: "" })}</span>
         </div>
         <button
           type="button"

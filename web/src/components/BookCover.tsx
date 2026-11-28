@@ -25,7 +25,7 @@ export function BookCover({ book, eager, className }: Props) {
             <div className={styles.placeholderTitle}>{book.title}</div>
             <div className={styles.rule} />
           </div>
-          <div className={styles.placeholderAuthor}>{authorsText(book.authors, "")}</div>
+          <div className={styles.placeholderAuthor}>{authorsText(book.authors, { fallback: "" })}</div>
         </div>
       )}
       {showImage && (
