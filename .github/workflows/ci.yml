@@ -19,7 +19,8 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - run: dotnet restore
-      - run: dotnet build --no-restore -c Release
+      # The web job builds the frontend; skip the API project's built-in web build here.
+      - run: dotnet build --no-restore -c Release -p:SkipWebBuild=true
       - run: dotnet test --no-build -c Release
 
   web:

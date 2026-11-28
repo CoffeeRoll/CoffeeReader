@@ -157,6 +157,13 @@
   filter: drop-shadow(0 18px 24px rgba(30, 15, 5, 0.3));
   cursor: grabbing;
   pointer-events: none;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* Over the dock the cover shrinks to the pointer, so the shelf under it stays readable. */
+.overlayOverDock {
+  transform: scale(0.38);
+  opacity: 0.85;
 }
 
 .emptyDrop {
@@ -298,4 +305,100 @@
 .arrangeItem .icon-btn svg {
   width: 18px;
   height: 18px;
+}
+
+/* ---- Dock: shelves to drop on while dragging ---- */
+
+.dock {
+  position: fixed;
+  z-index: 900;
+  left: 50%;
+  bottom: calc(var(--tabbar-height) + var(--safe-bottom) + 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(880px, calc(100vw - 20px));
+  max-height: 40vh;
+  padding: 10px 12px 12px;
+  overflow-y: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  transform: translateX(-50%);
+  animation: dock-in 0.16s ease-out;
+}
+
+@media (min-width: 900px) {
+  .dock {
+    bottom: 20px;
+  }
+}
+
+@keyframes dock-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.dockLabel {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dockChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dockChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 16px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
+}
+
+.dockChip svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dockChipOver {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  transform: scale(1.04);
+}
+
+.dockChip[aria-disabled] {
+  opacity: 0.45;
+}
+
+.dockName {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dockCount {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.7;
 }

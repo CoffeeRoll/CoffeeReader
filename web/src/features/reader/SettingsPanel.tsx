@@ -37,6 +37,21 @@ export function SettingsPanel({ settings, onChange, wide, kind }: Props) {
       {reflowable && (
         <>
       <div className={styles.settingGroup}>
+        <span className={styles.settingLabel}>Reading mode</span>
+        <div className={styles.segmented}>
+          <button type="button" aria-pressed={settings.flow === "paginated"} onClick={() => set("flow", "paginated")}>
+            Pages
+          </button>
+          <button type="button" aria-pressed={settings.flow === "scrolled"} onClick={() => set("flow", "scrolled")}>
+            Scroll
+          </button>
+        </div>
+        <span className={styles.settingHint}>
+          {settings.flow === "scrolled" ? "Each chapter is one long page. Code keeps its lines and scrolls sideways." : "Turn pages like a book."}
+        </span>
+      </div>
+
+      <div className={styles.settingGroup}>
         <span className={styles.settingLabel}>Font</span>
         <div className={styles.fontGrid}>
           {(Object.keys(fonts) as (keyof typeof fonts)[]).map((key) => (
@@ -130,7 +145,7 @@ export function SettingsPanel({ settings, onChange, wide, kind }: Props) {
         </>
       )}
 
-      {wide && (
+      {wide && !(reflowable && settings.flow === "scrolled") && (
         <div className={styles.settingGroup}>
           <span className={styles.settingLabel}>Pages</span>
           <div className={styles.segmented}>
@@ -151,7 +166,7 @@ export function SettingsPanel({ settings, onChange, wide, kind }: Props) {
             <input type="checkbox" checked={settings.tocPinned} onChange={(e) => set("tocPinned", e.target.checked)} />
           </label>
         )}
-        {reflowable && (
+        {reflowable && settings.flow === "paginated" && (
           <label className={styles.toggleRow}>
             Animate page turns
             <input type="checkbox" checked={settings.animate} onChange={(e) => set("animate", e.target.checked)} />

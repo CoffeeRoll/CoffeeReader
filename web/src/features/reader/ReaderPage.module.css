@@ -526,6 +526,12 @@
   text-transform: uppercase;
 }
 
+.settingHint {
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
 .swatches {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

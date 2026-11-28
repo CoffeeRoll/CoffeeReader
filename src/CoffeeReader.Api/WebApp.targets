@@ -1,0 +1,77 @@
+<Project>
+  <!--
+    Builds the React app in web/ and copies it into wwwroot as part of `dotnet build`, so `dotnet run`
+    serves the whole app. Incremental: npm only runs when the frontend's files change.
+
+    Skip it with -p:SkipWebBuild=true (the Docker image and CI build the web app in their own steps).
+    Without Node.js the step is skipped with a message and the API still builds.
+  -->
+  <PropertyGroup>
+    <WebAppDirectory>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'web'))</WebAppDirectory>
+    <WebAppOutput>$(WebAppDirectory)dist/</WebAppOutput>
+    <WebRootDirectory>$(MSBuildThisFileDirectory)wwwroot/</WebRootDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The built app is copied in by the targets below (and on publish), not tracked as project content. -->
+    <Content Remove="wwwroot/**" />
+    <WebAppSource Include="$(WebAppDirectory)src/**/*;$(WebAppDirectory)public/**/*;$(WebAppDirectory)scripts/**/*"
+                  Exclude="$(WebAppDirectory)public/pdfjs/**/*" />
+    <WebAppSource Include="$(WebAppDirectory)index.html;$(WebAppDirectory)package.json;$(WebAppDirectory)package-lock.json;$(WebAppDirectory)tsconfig.json;$(WebAppDirectory)vite.config.ts" />
+  </ItemGroup>
+
+  <Target Name="BuildWebApp"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(SkipWebBuild)' != 'true' and '$(DesignTimeBuild)' != 'true' and Exists('$(WebAppDirectory)package.json')"
+          DependsOnTargets="FindNodeForWebApp;InstallWebAppPackages;CompileWebApp;CopyWebAppToWebRoot" />
+
+  <Target Name="FindNodeForWebApp">
+    <Exec Command="node --version" IgnoreExitCode="true" EchoOff="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreStandardErrorWarningFormat="true">
+      <Output TaskParameter="ExitCode" PropertyName="_NodeExitCode" />
+    </Exec>
+    <PropertyGroup>
+      <_CanBuildWebApp Condition="'$(_NodeExitCode)' == '0'">true</_CanBuildWebApp>
+    </PropertyGroup>
+    <Message Importance="high" Condition="'$(_CanBuildWebApp)' != 'true'"
+             Text="CoffeeReader: Node.js wasn't found, so the web app wasn't built (the API still works). Install Node.js 22, or pass -p:SkipWebBuild=true to hide this message." />
+  </Target>
+
+  <Target Name="InstallWebAppPackages"
+          Condition="'$(_CanBuildWebApp)' == 'true'"
+          Inputs="$(WebAppDirectory)package.json;$(WebAppDirectory)package-lock.json"
+          Outputs="$(WebAppDirectory)node_modules/.package-lock.json">
+    <Message Importance="high" Text="CoffeeReader: installing web app packages (npm ci)..." />
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(WebAppDirectory)" />
+  </Target>
+
+  <Target Name="CompileWebApp"
+          Condition="'$(_CanBuildWebApp)' == 'true'"
+          Inputs="@(WebAppSource)"
+          Outputs="$(WebAppOutput)index.html">
+    <Message Importance="high" Text="CoffeeReader: building the web app (npm run build)..." />
+    <Exec Command="npm run build" WorkingDirectory="$(WebAppDirectory)" />
+    <Touch Files="$(WebAppOutput)index.html" />
+  </Target>
+
+  <Target Name="CopyWebAppToWebRoot"
+          Condition="'$(_CanBuildWebApp)' == 'true'"
+          Inputs="$(WebAppOutput)index.html"
+          Outputs="$(WebRootDirectory)index.html">
+    <ItemGroup>
+      <_WebAppFiles Include="$(WebAppOutput)**/*" />
+    </ItemGroup>
+    <!-- Bundles are content-hashed, so clear out the previous build's files first. -->
+    <RemoveDir Directories="$(WebRootDirectory)assets;$(WebRootDirectory)pdfjs" />
+    <Copy SourceFiles="@(_WebAppFiles)" DestinationFiles="@(_WebAppFiles->'$(WebRootDirectory)%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Touch Files="$(WebRootDirectory)index.html" />
+    <Message Importance="high" Text="CoffeeReader: web app copied to $(WebRootDirectory)" />
+  </Target>
+
+  <!-- wwwroot isn't project content, so include it in publish output explicitly. -->
+  <Target Name="PublishWebApp" AfterTargets="Publish" Condition="Exists('$(WebRootDirectory)index.html')">
+    <ItemGroup>
+      <_WebRootFiles Include="$(WebRootDirectory)**/*" Exclude="$(WebRootDirectory).gitkeep" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_WebRootFiles)" DestinationFiles="@(_WebRootFiles->'$(PublishDir)wwwroot/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

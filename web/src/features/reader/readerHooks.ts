@@ -96,8 +96,16 @@ export function useWheelTurns(turn: (direction: 1 | -1) => void) {
   );
 }
 
-/** Arrow keys, space, page up/down; T for contents and / for search. Returns a handler for iframes. */
-export function useReaderKeys(turn: (direction: 1 | -1) => void, setPanel: (update: (panel: Panel) => Panel) => void, isRtl: () => boolean) {
+/**
+ * Arrow keys, space, page up/down; T for contents and / for search. Returns a handler for iframes.
+ * `scrollLine` (scroll mode) makes the up and down arrows scroll a little instead of a whole screen.
+ */
+export function useReaderKeys(
+  turn: (direction: 1 | -1) => void,
+  setPanel: (update: (panel: Panel) => Panel) => void,
+  isRtl: () => boolean,
+  scrollLine?: (direction: 1 | -1) => boolean,
+) {
   const onKey = useCallback(
     (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -111,9 +119,13 @@ export function useReaderKeys(turn: (direction: 1 | -1) => void, setPanel: (upda
         case "ArrowLeft":
           return rtl ? forward() : back();
         case "ArrowDown":
-        case "PageDown":
+          if (scrollLine?.(1)) return event.preventDefault();
           return forward();
         case "ArrowUp":
+          if (scrollLine?.(-1)) return event.preventDefault();
+          return back();
+        case "PageDown":
+          return forward();
         case "PageUp":
           return back();
         case " ":
@@ -130,7 +142,7 @@ export function useReaderKeys(turn: (direction: 1 | -1) => void, setPanel: (upda
           return;
       }
     },
-    [turn, setPanel, isRtl],
+    [turn, setPanel, isRtl, scrollLine],
   );
 
   useEffect(() => {

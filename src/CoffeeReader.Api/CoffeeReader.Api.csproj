@@ -19,4 +19,7 @@
     <InternalsVisibleTo Include="CoffeeReader.Tests" />
   </ItemGroup>
 
+  <!-- Builds web/ into wwwroot during `dotnet build` (skip with -p:SkipWebBuild=true). -->
+  <Import Project="WebApp.targets" />
+
 </Project>
