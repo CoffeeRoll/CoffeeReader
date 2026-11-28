@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using CoffeeReader.Infrastructure.Ebooks.Html;
 using CoffeeReader.Application.Abstractions;
 
 namespace CoffeeReader.Infrastructure.Ebooks.Epub;
@@ -137,66 +138,6 @@ internal sealed class EpubPackage : IDisposable
 
     public void Dispose() => _archive.Dispose();
 
-    /// <summary>
-    /// Resolves an href found in <paramref name="baseDirectory"/> into a container path, dropping any fragment.
-    /// </summary>
-    public static string ResolvePath(string baseDirectory, string href)
-    {
-        var withoutFragment = SplitFragment(href).Path;
-        string decoded;
-        try
-        {
-            decoded = Uri.UnescapeDataString(withoutFragment);
-        }
-        catch (UriFormatException)
-        {
-            decoded = withoutFragment;
-        }
-
-        decoded = decoded.Replace('\\', '/');
-        var combined = decoded.StartsWith('/') || baseDirectory.Length == 0 ? decoded : $"{baseDirectory}/{decoded}";
-        var stack = new List<string>();
-        foreach (var segment in combined.Split('/'))
-        {
-            if (segment.Length == 0 || segment == ".")
-            {
-                continue;
-            }
-
-            if (segment == "..")
-            {
-                if (stack.Count > 0)
-                {
-                    stack.RemoveAt(stack.Count - 1);
-                }
-
-                continue;
-            }
-
-            stack.Add(segment);
-        }
-
-        return string.Join('/', stack);
-    }
-
-    public static (string Path, string? Fragment) SplitFragment(string href)
-    {
-        var hash = href.IndexOf('#');
-        if (hash < 0)
-        {
-            return (href, null);
-        }
-
-        var fragment = href[(hash + 1)..];
-        return (href[..hash], fragment.Length == 0 ? null : Uri.UnescapeDataString(fragment));
-    }
-
-    public static string DirectoryOf(string path)
-    {
-        var slash = path.LastIndexOf('/');
-        return slash < 0 ? string.Empty : path[..slash];
-    }
-
     private void Load()
     {
         if (FindEntry("META-INF/container.xml") is null)
@@ -212,8 +153,8 @@ internal sealed class EpubPackage : IDisposable
             .FirstOrDefault(p => !string.IsNullOrWhiteSpace(p) && p.EndsWith(".opf", StringComparison.OrdinalIgnoreCase))
             ?? throw new EbookFormatException("The EPUB doesn't say where its package document is.");
 
-        OpfPath = ResolvePath(string.Empty, rootFile);
-        OpfDirectory = DirectoryOf(OpfPath);
+        OpfPath = ContainerPath.Resolve(string.Empty, rootFile);
+        OpfDirectory = ContainerPath.DirectoryOf(OpfPath);
         Opf = ReadXml(OpfPath) ?? throw new EbookFormatException($"The EPUB package document ({OpfPath}) is missing or malformed.");
         Version = (string?)Opf.Root?.Attribute("version");
 
@@ -229,7 +170,7 @@ internal sealed class EpubPackage : IDisposable
 
             manifest.TryAdd(id, new ManifestItem(
                 id,
-                ResolvePath(OpfDirectory, href),
+                ContainerPath.Resolve(OpfDirectory, href),
                 ((string?)item.Attribute("media-type") ?? string.Empty).Trim().ToLowerInvariant(),
                 ((string?)item.Attribute("properties") ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries)));
         }

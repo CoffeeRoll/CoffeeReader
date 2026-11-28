@@ -15,7 +15,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # Your ebooks. Drop .epub files in here (any folder structure) or upload them in the app.
+      # Your ebooks (.epub, .mobi, .pdf). Drop them in here (any folder structure) or upload them in the app.
       # Add ":ro" to mount read-only; reading works, uploads and deletes are disabled.
       - ./books:/books
       # Database, cover thumbnails and sign-in keys. Back this folder up.

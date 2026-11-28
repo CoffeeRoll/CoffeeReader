@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AngleSharp.Dom;
+using CoffeeReader.Infrastructure.Ebooks.Html;
 using CoffeeReader.Application.Abstractions;
 using CoffeeReader.Domain.Common;
 using CoffeeReader.Domain.Entities;
@@ -285,7 +286,7 @@ public sealed partial class EpubParser : IEbookParser
             }
             else
             {
-                yield return EpubPackage.ResolvePath(package.OpfDirectory, coverMeta);
+                yield return ContainerPath.Resolve(package.OpfDirectory, coverMeta);
             }
         }
 
@@ -297,7 +298,7 @@ public sealed partial class EpubParser : IEbookParser
         var coverPages = new List<string>();
         if (guideCover is not null)
         {
-            coverPages.Add(EpubPackage.ResolvePath(package.OpfDirectory, guideCover));
+            coverPages.Add(ContainerPath.Resolve(package.OpfDirectory, guideCover));
         }
 
         coverPages.Add(package.Spine[0].Item.Path);
@@ -336,7 +337,7 @@ public sealed partial class EpubParser : IEbookParser
             ?? document.All.Where(e => e.LocalName == "image")
                 .Select(e => e.GetAttribute("xlink:href") ?? e.GetAttribute("href"))
                 .FirstOrDefault(h => !string.IsNullOrWhiteSpace(h));
-        return source is null ? null : EpubPackage.ResolvePath(EpubPackage.DirectoryOf(documentPath), source);
+        return source is null ? null : ContainerPath.Resolve(ContainerPath.DirectoryOf(documentPath), source);
     }
 
     // ---- Table of contents ----------------------------------------------------------------------------
@@ -378,7 +379,7 @@ public sealed partial class EpubParser : IEbookParser
         }
 
         var entries = new List<ParsedTocEntry>();
-        var baseDirectory = EpubPackage.DirectoryOf(navPath);
+        var baseDirectory = ContainerPath.DirectoryOf(navPath);
         WalkNavList(package, list, 0, baseDirectory, entries);
         return entries;
     }
@@ -421,7 +422,7 @@ public sealed partial class EpubParser : IEbookParser
         }
 
         var entries = new List<ParsedTocEntry>();
-        WalkNavPoints(package, navMap, 0, EpubPackage.DirectoryOf(ncxPath), entries);
+        WalkNavPoints(package, navMap, 0, ContainerPath.DirectoryOf(ncxPath), entries);
         return entries;
     }
 
@@ -447,8 +448,8 @@ public sealed partial class EpubParser : IEbookParser
             return null;
         }
 
-        var path = EpubPackage.ResolvePath(baseDirectory, href);
-        var (_, fragment) = EpubPackage.SplitFragment(href);
+        var path = ContainerPath.Resolve(baseDirectory, href);
+        var (_, fragment) = ContainerPath.SplitFragment(href);
         for (var i = 0; i < package.Spine.Count; i++)
         {
             if (string.Equals(package.Spine[i].Item.Path, path, StringComparison.OrdinalIgnoreCase))

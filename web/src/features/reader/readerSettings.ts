@@ -4,6 +4,7 @@ export type ReaderTheme = "paper" | "sepia" | "dusk" | "night";
 export type ReaderFont = "publisher" | "literata" | "atkinson" | "georgia" | "sans";
 export type TextAlign = "publisher" | "left" | "justify";
 export type PageLayout = "auto" | "single";
+export type PdfFit = "page" | "width";
 
 export interface ReaderSettings {
   theme: ReaderTheme;
@@ -15,6 +16,12 @@ export interface ReaderSettings {
   layout: PageLayout;
   tocPinned: boolean;
   animate: boolean;
+  /** PDFs: show whole pages, or fill the width and scroll. */
+  pdfFit: PdfFit;
+  /** PDFs: tint or invert pages to match the theme. */
+  pdfRecolor: boolean;
+  /** PDFs in "page width" mode: extra zoom (1 = fit the width). */
+  pdfZoom: number;
 }
 
 export const themes: Record<ReaderTheme, { label: string; page: string; desk: string; text: string; muted: string; link: string; highlight: string; dark: boolean }> = {
@@ -46,6 +53,9 @@ export const defaultSettings: ReaderSettings = {
   layout: "auto",
   tocPinned: true,
   animate: true,
+  pdfFit: "page",
+  pdfRecolor: true,
+  pdfZoom: 1,
 };
 
 export function useReaderSettings() {
@@ -111,4 +121,19 @@ export function typographyCss(settings: ReaderSettings): string {
   }
 
   return rules.join("\n");
+}
+
+/** CSS filter that makes a rendered PDF page match the reading theme. */
+export function pdfPageFilter(settings: ReaderSettings): string | undefined {
+  if (!settings.pdfRecolor) return undefined;
+  switch (settings.theme) {
+    case "sepia":
+      return "sepia(0.3) saturate(1.1) brightness(0.97)";
+    case "dusk":
+      return "invert(0.86) hue-rotate(180deg) sepia(0.2) brightness(0.95)";
+    case "night":
+      return "invert(0.9) hue-rotate(180deg) brightness(0.9)";
+    default:
+      return undefined;
+  }
 }

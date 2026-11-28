@@ -5,9 +5,12 @@ interface Props {
   settings: ReaderSettings;
   onChange: (settings: ReaderSettings) => void;
   wide: boolean;
+  /** Typography applies to reflowable books; PDFs get fit and colour options instead. */
+  kind: "reflowable" | "fixed";
 }
 
-export function SettingsPanel({ settings, onChange, wide }: Props) {
+export function SettingsPanel({ settings, onChange, wide, kind }: Props) {
+  const reflowable = kind === "reflowable";
   const set = <K extends keyof ReaderSettings>(key: K, value: ReaderSettings[K]) => onChange({ ...settings, [key]: value });
 
   return (
@@ -31,6 +34,8 @@ export function SettingsPanel({ settings, onChange, wide }: Props) {
         </div>
       </div>
 
+      {reflowable && (
+        <>
       <div className={styles.settingGroup}>
         <span className={styles.settingLabel}>Font</span>
         <div className={styles.fontGrid}>
@@ -88,6 +93,43 @@ export function SettingsPanel({ settings, onChange, wide }: Props) {
         </div>
       </div>
 
+        </>
+      )}
+
+      {!reflowable && (
+        <>
+          <div className={styles.settingGroup}>
+            <span className={styles.settingLabel}>Fit</span>
+            <div className={styles.segmented}>
+              <button type="button" aria-pressed={settings.pdfFit === "page"} onClick={() => set("pdfFit", "page")}>
+                Whole page
+              </button>
+              <button type="button" aria-pressed={settings.pdfFit === "width"} onClick={() => set("pdfFit", "width")}>
+                Page width
+              </button>
+            </div>
+          </div>
+          {settings.pdfFit === "width" && (
+            <div className={styles.settingGroup}>
+              <span className={styles.settingLabel}>Zoom</span>
+              <div className={styles.stepper}>
+                <button type="button" onClick={() => set("pdfZoom", Math.max(1, Math.round((settings.pdfZoom - 0.25) * 4) / 4))} aria-label="Zoom out" style={{ fontSize: 20 }}>
+                  −
+                </button>
+                <output>{Math.round(settings.pdfZoom * 100)}%</output>
+                <button type="button" onClick={() => set("pdfZoom", Math.min(3, Math.round((settings.pdfZoom + 0.25) * 4) / 4))} aria-label="Zoom in" style={{ fontSize: 20 }}>
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+          <label className={styles.toggleRow}>
+            Tint pages to match the theme
+            <input type="checkbox" checked={settings.pdfRecolor} onChange={(e) => set("pdfRecolor", e.target.checked)} />
+          </label>
+        </>
+      )}
+
       {wide && (
         <div className={styles.settingGroup}>
           <span className={styles.settingLabel}>Pages</span>
@@ -109,10 +151,12 @@ export function SettingsPanel({ settings, onChange, wide }: Props) {
             <input type="checkbox" checked={settings.tocPinned} onChange={(e) => set("tocPinned", e.target.checked)} />
           </label>
         )}
-        <label className={styles.toggleRow}>
-          Animate page turns
-          <input type="checkbox" checked={settings.animate} onChange={(e) => set("animate", e.target.checked)} />
-        </label>
+        {reflowable && (
+          <label className={styles.toggleRow}>
+            Animate page turns
+            <input type="checkbox" checked={settings.animate} onChange={(e) => set("animate", e.target.checked)} />
+          </label>
+        )}
       </div>
     </div>
   );

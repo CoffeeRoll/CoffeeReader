@@ -14,10 +14,12 @@ namespace CoffeeReader.Infrastructure.Library;
 /// </summary>
 public sealed class LibraryScanService(
     IServiceScopeFactory scopeFactory,
+    IEnumerable<IEbookParser> parsers,
     IOptions<LibraryScanOptions> scanOptions,
     IOptions<StorageOptions> storageOptions,
     ILogger<LibraryScanService> logger) : BackgroundService, ILibraryScanTrigger
 {
+    private readonly HashSet<string> _extensions = parsers.SelectMany(p => p.Extensions).ToHashSet(StringComparer.OrdinalIgnoreCase);
     private readonly Channel<ScanRequest> _requests = Channel.CreateUnbounded<ScanRequest>(new UnboundedChannelOptions { SingleReader = true });
     private FileSystemWatcher? _watcher;
 
@@ -150,7 +152,7 @@ public sealed class LibraryScanService(
     {
         var extension = Path.GetExtension(e.FullPath);
         var isDirectory = extension.Length == 0;
-        if (isDirectory || extension.Equals(".epub", StringComparison.OrdinalIgnoreCase))
+        if (isDirectory || _extensions.Contains(extension))
         {
             _requests.Writer.TryWrite(new ScanRequest("files changed", Debounce: true));
         }

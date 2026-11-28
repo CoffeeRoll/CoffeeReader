@@ -157,6 +157,27 @@
   overflow-wrap: anywhere;
 }
 
+.formatBadge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.formatBadge[data-format="pdf"] {
+  background: #a8261c;
+  color: #fff;
+}
+
+.formatBadge[data-format="mobi"] {
+  background: #b27006;
+  color: #fff;
+}
+
 .sectionTitle {
   font-size: 13px;
   font-weight: 700;

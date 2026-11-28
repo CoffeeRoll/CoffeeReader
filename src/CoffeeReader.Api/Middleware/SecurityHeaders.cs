@@ -4,10 +4,11 @@ internal static class SecurityHeaders
 {
     /// <summary>
     /// The policy for the web app. The reader renders book chapters in a same-origin iframe, which inherits
-    /// this policy, so no script from a book can ever run.
+    /// this policy, so no script from a book can ever run. WebAssembly compilation (not eval) is allowed
+    /// for PDF.js's image decoders.
     /// </summary>
     public const string AppPolicy =
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; " +
         "font-src 'self' data:; connect-src 'self'; media-src 'self'; frame-src 'self'; object-src 'none'; " +
         "base-uri 'self'; form-action 'self'; frame-ancestors 'self'; manifest-src 'self'";
 

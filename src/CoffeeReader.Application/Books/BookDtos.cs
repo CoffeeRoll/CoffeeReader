@@ -18,7 +18,8 @@ public sealed record BookSummaryDto(
     bool HasCover,
     long CoverVersion,
     DateTime AddedAt,
-    ProgressSummaryDto? Progress);
+    ProgressSummaryDto? Progress,
+    BookFormat Format);
 
 public sealed record BookDetailsDto(
     int Id,
@@ -54,4 +55,4 @@ public sealed record UpdateBookRequest(
     string? PublishedDate,
     string? Isbn);
 
-public sealed record BookDownload(string FullPath, string FileName, string ContentType);
+public sealed record BookDownload(string FullPath, string FileName, string ContentType, DateTime LastModified, string Hash);

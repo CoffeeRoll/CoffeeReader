@@ -1,3 +1,5 @@
+using CoffeeReader.Domain.Entities;
+
 namespace CoffeeReader.Application.Reading;
 
 public sealed record ChapterInfoDto(int Index, string Href, string? Title, long Length, bool IsLinear);
@@ -14,6 +16,8 @@ public sealed record ProgressDto(
 
 public sealed record ReaderManifestDto(
     int BookId,
+    BookFormat Format,
+    string FileVersion,
     string Title,
     IReadOnlyList<string> Authors,
     string? Language,

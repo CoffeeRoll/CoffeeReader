@@ -2,7 +2,7 @@ using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using Ganss.Xss;
 
-namespace CoffeeReader.Infrastructure.Ebooks.Epub;
+namespace CoffeeReader.Infrastructure.Ebooks.Html;
 
 /// <summary>
 /// Strips anything executable from book content while keeping the markup books actually use

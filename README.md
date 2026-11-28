@@ -4,11 +4,15 @@ A self-hosted ebook library and reader that puts **readability** first. Books lo
 pages in a book, not like web pages. Organise them on shelves by dragging and dropping, read on your
 phone with taps and swipes, and keep everything in one container with two volumes.
 
+Reads **EPUB**, **MOBI** and **PDF**.
+
 ![Home page with continue reading and shelves](docs/screenshots/home.webp)
 
 | Reading on a wide screen | Search inside a book |
 | --- | --- |
 | ![Two-page spread with pinned table of contents](docs/screenshots/reader-spread.webp) | ![Search results highlighted in the page](docs/screenshots/reader-search.webp) |
+| **PDFs as book spreads** | **Every cover shows its format** |
+| ![PDF two-page spread with its outline as contents](docs/screenshots/reader-pdf.webp) | ![Library grouped by series with format chips](docs/screenshots/library.webp) |
 
 | Phone reader | Phone library |
 | --- | --- |
@@ -39,7 +43,16 @@ Also:
   the other device uses a different text size.
 - **Installable** on phones as a home-screen app (PWA) for full-screen reading.
 
-Supported format: **EPUB** (2 and 3).
+### Formats
+
+| Format | How it reads |
+| --- | --- |
+| **EPUB** (2 and 3) | Paginated, with all typography settings. |
+| **MOBI** (`.mobi`, `.azw`, `.prc`; Mobipocket / Kindle MOBI 6) | Converted on the fly into the same paginated reader as EPUB: chapters, contents, internal links, images, search and typography all work. Combined KindleGen files are read through their MOBI 6 part. |
+| **PDF** | Shown as real pages (PDF.js), one at a time or as book-style spreads, with the PDF's outline as contents. Choose *Whole page* or *Page width* (with zoom up to 300% for small text on phones), and optionally tint pages to match Sepia or invert them for the dark themes. Text can be selected and searched. |
+
+Every cover carries a small chip (**EPUB**, **MOBI**, **PDF**) so you can tell at a glance, the
+book page lists the format, and the Library can filter by format.
 
 ## Quick start (Docker)
 
@@ -56,7 +69,7 @@ docker compose up -d --build
 ```
 
 Open <http://localhost:8080> and create the administrator account. Then add books by uploading them,
-or by copying `.epub` files into `./books` (any folder structure works).
+or by copying ebooks (`.epub`, `.mobi`, `.pdf`) into `./books` (any folder structure works).
 
 The compose file builds the image from source. Once CI has published an image (it builds one for
 amd64 and arm64 on every push to `main`), you can skip the clone: copy `docker-compose.yml` anywhere,
@@ -117,7 +130,10 @@ The health check endpoint is `GET /health`.
 | Show or hide toolbars | Always shown | Tap the middle of the page |
 | Contents | `T`, or the list button (pin it to keep it open) | List button |
 | Search | `/`, or the magnifier | Magnifier |
-| Text, theme, margins, layout | The **Aa** button | The **Aa** button |
+| Text, theme, margins, layout (PDF: fit, zoom, tint) | The **Aa** button | The **Aa** button |
+
+In a PDF zoomed past the page width, scrolling and dragging pan the page; taps, keys and the arrow
+buttons still turn it.
 
 Following a link in a book (for example a footnote) shows a **Back to where you were** button.
 Reading settings are saved per device, since a phone and a monitor usually want different sizes.
@@ -129,14 +145,16 @@ src/
   CoffeeReader.Domain          Entities and rules (books, shelves, progress, users). No dependencies.
   CoffeeReader.Application     Use cases and ports: auth, users, catalog, reader, search, shelves,
                                library import/scan. Depends only on Domain (+ EF Core abstractions).
-  CoffeeReader.Infrastructure  Adapters: EF Core + SQLite, EPUB parser and sanitizing chapter
-                               renderer, library folder, cover thumbnails, background scanner.
+  CoffeeReader.Infrastructure  Adapters: EF Core + SQLite, ebook formats (Ebooks/Epub, Ebooks/Mobi,
+                               Ebooks/Pdf, shared Ebooks/Html sanitizing renderer), library folder,
+                               cover thumbnails, background scanner.
   CoffeeReader.Api             ASP.NET Core host: cookie sessions, minimal API endpoints,
                                security headers, serves the web app.
 web/                           React + TypeScript (Vite)
   src/api                      Typed API client and TanStack Query hooks
   src/features/library         Home (shelf board), library grid, book page, shelf actions
-  src/features/reader          Paginator engine, reader UI, panels, search folding
+  src/features/reader          Reader shell, EPUB/MOBI paginator, PDF reader (PDF.js), panels,
+                               search folding
   src/features/settings        Account, people and library administration
 tests/CoffeeReader.Tests       Domain, parser, sanitizer, search and full API flow tests
 ```
@@ -152,6 +170,12 @@ How the main pieces work:
   The browser renders it in a same-origin iframe laid out with CSS multi-column: one column per page,
   or two for a spread. Page turns are GPU transforms. Positions are stored as a character offset
   into the chapter, which is why reflowing text keeps you on the same sentence.
+- **Formats.** Each format plugs in a parser (metadata, reading order, contents, cover) and a
+  content provider. MOBI is decompressed (PalmDOC or Huffman/CDIC) and split at its page breaks
+  into HTML chapters; `filepos` links become anchors and image records become resources, so MOBI
+  uses the EPUB reader unchanged. PDFs are read with PDFium (metadata, outline, page text for
+  search, first-page cover) and drawn in the browser by PDF.js, which fetches only the byte ranges
+  it needs. Each PDF page is one "chapter", so progress and search work per page.
 - **Search.** The server scans the chapters and returns the *n*-th match per chapter. The browser
   folds text with the same rules (case, accents, whitespace) to find and highlight that exact
   occurrence.
@@ -163,7 +187,8 @@ How the main pieces work:
 
 ## Development
 
-Requirements: .NET 10 SDK and Node.js 22.
+Requirements: .NET 10 SDK and Node.js 22. PDFium's native library comes from NuGet (Linux, Windows
+and macOS); PDF.js's fonts and decoders are copied into `web/public/pdfjs` by `npm run dev`/`build`.
 
 ```bash
 dotnet run --project src/CoffeeReader.Api
@@ -205,7 +230,10 @@ docker build -t coffeereader .
 
 ## Limitations and ideas
 
-- EPUB only for now; PDF and comic archives (CBZ) aren't supported.
+- KF8-only Kindle books (AZW3) aren't supported yet; convert them to EPUB (for example with
+  Calibre). DRM-protected books can't be opened.
+- Comic archives (CBZ/CBR) aren't supported.
+- PDFs are shown as fixed pages; there's no reflow mode for them.
 - No bookmarks, highlights or notes yet.
 - No OPDS feed for third-party reader apps.
 - Reading needs a connection to the server; there's no offline mode.

@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # ---- Web app ------------------------------------------------------------------------------------------
-FROM node:22-alpine AS web
+# Build stages run on the build machine's architecture; their output is portable.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -9,16 +10,25 @@ COPY web/ ./
 RUN npm run build
 
 # ---- API ----------------------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS api
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS api
+ARG TARGETARCH
 WORKDIR /src
+
+# Publish for the target architecture so the image carries only its native libraries (PDFium, SkiaSharp, SQLite).
+RUN case "${TARGETARCH:-amd64}" in \
+      amd64) echo linux-x64 ;; \
+      arm64) echo linux-arm64 ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac > /tmp/rid
 COPY Directory.Build.props Directory.Packages.props CoffeeReader.slnx ./
 COPY src/CoffeeReader.Domain/CoffeeReader.Domain.csproj src/CoffeeReader.Domain/
 COPY src/CoffeeReader.Application/CoffeeReader.Application.csproj src/CoffeeReader.Application/
 COPY src/CoffeeReader.Infrastructure/CoffeeReader.Infrastructure.csproj src/CoffeeReader.Infrastructure/
 COPY src/CoffeeReader.Api/CoffeeReader.Api.csproj src/CoffeeReader.Api/
-RUN dotnet restore src/CoffeeReader.Api/CoffeeReader.Api.csproj
+RUN dotnet restore src/CoffeeReader.Api/CoffeeReader.Api.csproj -r "$(cat /tmp/rid)"
 COPY src/ src/
-RUN dotnet publish src/CoffeeReader.Api/CoffeeReader.Api.csproj -c Release -o /app --no-restore -p:UseAppHost=false
+RUN dotnet publish src/CoffeeReader.Api/CoffeeReader.Api.csproj -c Release -r "$(cat /tmp/rid)" --self-contained false \
+      -o /app --no-restore -p:UseAppHost=false
 
 # ---- Runtime ------------------------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

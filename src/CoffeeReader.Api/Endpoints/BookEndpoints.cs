@@ -44,6 +44,21 @@ internal static class BookEndpoints
             return Results.File(download.FullPath, download.ContentType, download.FileName, enableRangeProcessing: true);
         });
 
+        // The book file itself, inline and with range support, for readers that render it in the
+        // browser (PDF.js fetches only the byte ranges it needs).
+        group.MapGet("/{id:int}/file", async (int id, HttpContext http, BookService books, CancellationToken ct) =>
+        {
+            var file = await books.GetDownloadAsync(id, ct);
+            SetPrivateCache(http.Response, TimeSpan.FromDays(1));
+            http.Response.Headers.ContentSecurityPolicy = Middleware.SecurityHeaders.BookFilePolicy;
+            return Results.File(
+                file.FullPath,
+                file.ContentType,
+                lastModified: file.LastModified,
+                entityTag: new Microsoft.Net.Http.Headers.EntityTagHeaderValue($"\"{file.Hash}\""),
+                enableRangeProcessing: true);
+        });
+
         // One book per request keeps uploads resumable from the UI and lets it show per-file progress.
         group.MapPost("/upload", async (HttpRequest request, LibraryService library, CancellationToken ct) =>
         {

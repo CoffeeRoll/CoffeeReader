@@ -1,5 +1,6 @@
 using CoffeeReader.Application.Abstractions;
 using CoffeeReader.Infrastructure.Ebooks.Epub;
+using CoffeeReader.Infrastructure.Ebooks.Html;
 using CoffeeReader.Tests.Support;
 
 namespace CoffeeReader.Tests.Ebooks;
@@ -73,7 +74,7 @@ public class ChapterRenderingTests
     [Fact]
     public void Removes_scripts_handlers_and_javascript_links()
     {
-        var chapter = EpubContentProvider.Render("""
+        var chapter = HtmlChapterRenderer.Render("""
             <html><head><script>alert(1)</script></head>
             <body><p onclick="steal()">Hello <a href="javascript:alert(1)">there</a></p>
             <script>alert(2)</script><iframe src="https://evil.example"></iframe>
@@ -92,18 +93,18 @@ public class ChapterRenderingTests
     [Fact]
     public void Expands_xml_self_closing_tags_so_content_isnt_swallowed()
     {
-        var chapter = EpubContentProvider.Render(
+        var chapter = HtmlChapterRenderer.Render(
             "<?xml version=\"1.0\"?><html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p><a id=\"page5\"/>After the anchor</p><p>Next</p></body></html>",
             "ch.xhtml");
 
         Assert.Contains("<a id=\"page5\"></a>After the anchor", chapter.BodyHtml);
-        Assert.Equal("After the anchorNext", EpubContentProvider.ChapterText(chapter.BodyHtml));
+        Assert.Equal("After the anchorNext", HtmlChapterRenderer.PlainText(chapter.BodyHtml));
     }
 
     [Fact]
     public void Collects_stylesheets_body_attributes_and_keeps_svg_covers()
     {
-        var chapter = EpubContentProvider.Render("""
+        var chapter = HtmlChapterRenderer.Render("""
             <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="fr">
             <head><link rel="stylesheet" href="../Styles/main.css"/><style>p { margin: 0 } </style><style></style></head>
             <body class="calibre" id="top">
@@ -125,12 +126,12 @@ public class ChapterRenderingTests
     [InlineData("OEBPS/Text", "../../../../etc/passwd", "etc/passwd")]
     [InlineData("", "/OEBPS/./x.css#frag", "OEBPS/x.css")]
     public void Paths_resolve_inside_the_container(string directory, string href, string expected) =>
-        Assert.Equal(expected, EpubPackage.ResolvePath(directory, href));
+        Assert.Equal(expected, ContainerPath.Resolve(directory, href));
 
     [Fact]
     public void Keeps_safe_body_styles_only()
     {
-        var chapter = EpubContentProvider.Render(
+        var chapter = HtmlChapterRenderer.Render(
             "<html><body style=\"margin:0; text-align:center; background:url(javascript:alert(1))\"><img src=\"c.jpg\"/></body></html>",
             "cover.xhtml");
         Assert.Equal("margin:0; text-align:center", chapter.BodyStyle);

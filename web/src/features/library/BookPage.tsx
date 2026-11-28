@@ -7,7 +7,7 @@ import type { BookDetails } from "../../api/types";
 import { BookCover } from "../../components/BookCover";
 import { Dialog } from "../../components/Dialog";
 import { useToast } from "../../components/Toaster";
-import { fileSize, formatIndex, percent, timeAgo } from "../../lib/format";
+import { fileSize, formatIndex, formatLabels, percent, timeAgo } from "../../lib/format";
 import { useShelfActions } from "./shelfActions";
 import { ShelfNameDialog } from "./ShelfNameDialog";
 import styles from "./BookPage.module.css";
@@ -174,6 +174,12 @@ export function BookPage() {
                   <dd>{book.isbn}</dd>
                 </>
               )}
+              <dt>Format</dt>
+              <dd>
+                <span className={styles.formatBadge} data-format={book.format}>
+                  {formatLabels[book.format]}
+                </span>
+              </dd>
               <dt>File</dt>
               <dd>
                 {book.fileName} · {fileSize(book.fileSize)}

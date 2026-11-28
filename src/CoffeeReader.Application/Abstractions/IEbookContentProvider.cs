@@ -1,3 +1,5 @@
+using CoffeeReader.Domain.Entities;
+
 namespace CoffeeReader.Application.Abstractions;
 
 /// <summary>
@@ -5,6 +7,8 @@ namespace CoffeeReader.Application.Abstractions;
 /// </summary>
 public interface IEbookContentProvider
 {
+    BookFormat Format { get; }
+
     /// <summary>Returns a sanitized, render-ready chapter document.</summary>
     Task<ChapterDocument> GetChapterAsync(string fullPath, string fileHash, string chapterHref, CancellationToken cancellationToken);
 

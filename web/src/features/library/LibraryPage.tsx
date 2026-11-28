@@ -2,11 +2,11 @@ import { SearchX, Search } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { useBooks } from "../../api/queries";
-import type { BookSummary } from "../../api/types";
+import type { BookFormat, BookSummary } from "../../api/types";
 import { BookCard } from "../../components/BookCard";
 import { EmptyState } from "../../components/EmptyState";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
-import { readingState, type ReadingState } from "../../lib/format";
+import { formatLabels, readingState, type ReadingState } from "../../lib/format";
 import { BookMenu } from "./BookMenu";
 import styles from "./LibraryPage.module.css";
 
@@ -18,6 +18,7 @@ interface View {
   sort: Sort;
   group: Group;
   filter: Filter;
+  format: "all" | BookFormat;
 }
 
 const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
@@ -43,7 +44,10 @@ export function LibraryPage() {
   const [params, setParams] = useSearchParams();
   const query = params.get("q") ?? "";
   const searchRef = useRef<HTMLInputElement>(null);
-  const [view, setView] = useLocalStorage<View>("cr.libraryView", { sort: "title", group: "none", filter: "all" });
+  const [view, setView] = useLocalStorage<View>("cr.libraryView", { sort: "title", group: "none", filter: "all", format: "all" });
+  const formatsInLibrary = useMemo(() => [...new Set(books.map((b) => b.format))].sort(), [books]);
+  // A remembered filter for a format the library no longer has would hide everything.
+  const formatFilter = view.format !== "all" && formatsInLibrary.includes(view.format) ? view.format : "all";
 
   useEffect(() => {
     if (params.get("focus") === "search") searchRef.current?.focus();
@@ -53,13 +57,14 @@ export function LibraryPage() {
     const words = fold(query).split(/\s+/).filter(Boolean);
     return books
       .filter((book) => view.filter === "all" || readingState(book) === view.filter)
+      .filter((book) => formatFilter === "all" || book.format === formatFilter)
       .filter((book) => {
         if (words.length === 0) return true;
         const haystack = fold([book.title, book.series?.name ?? "", ...book.authors.map((a) => a.name)].join(" "));
         return words.every((word) => haystack.includes(word));
       })
       .sort(sorters[view.group === "series" ? "series" : view.sort]);
-  }, [books, query, view]);
+  }, [books, query, view, formatFilter]);
 
   const groups = useMemo(() => {
     if (view.group === "none") return [{ key: "all", title: null as string | null, books: filtered }];
@@ -116,6 +121,19 @@ export function LibraryPage() {
               <option value="read">Recently read</option>
             </select>
           </label>
+          {formatsInLibrary.length > 1 && (
+            <label>
+              Format
+              <select value={formatFilter} onChange={(e) => setView((v) => ({ ...v, format: e.target.value as View["format"] }))}>
+                <option value="all">All</option>
+                {formatsInLibrary.map((format) => (
+                  <option key={format} value={format}>
+                    {formatLabels[format]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Group
             <select value={view.group} onChange={(e) => setView((v) => ({ ...v, group: e.target.value as Group }))}>

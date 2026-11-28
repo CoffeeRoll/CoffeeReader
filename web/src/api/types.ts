@@ -33,6 +33,8 @@ export interface ProgressSummary {
   updatedAt: string;
 }
 
+export type BookFormat = "epub" | "pdf" | "mobi";
+
 export interface BookSummary {
   id: number;
   title: string;
@@ -44,6 +46,7 @@ export interface BookSummary {
   coverVersion: number;
   addedAt: string;
   progress: ProgressSummary | null;
+  format: BookFormat;
 }
 
 export interface BookDetails extends BookSummary {
@@ -54,7 +57,6 @@ export interface BookDetails extends BookSummary {
   isbn: string | null;
   fileName: string;
   fileSize: number;
-  format: "epub";
   chapterCount: number;
   metadataLocked: boolean;
   shelfIds: number[];
@@ -105,6 +107,9 @@ export interface Progress {
 
 export interface ReaderManifest {
   bookId: number;
+  format: BookFormat;
+  /** Changes whenever the file changes; used to cache the raw file safely. */
+  fileVersion: string;
   title: string;
   authors: string[];
   language: string | null;

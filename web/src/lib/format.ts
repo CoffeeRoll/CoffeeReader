@@ -1,4 +1,6 @@
-import type { AuthorRef, BookSummary } from "../api/types";
+import type { AuthorRef, BookFormat, BookSummary } from "../api/types";
+
+export const formatLabels: Record<BookFormat, string> = { epub: "EPUB", pdf: "PDF", mobi: "MOBI" };
 
 export function authorsText(authors: AuthorRef[] | string[], fallback = "Unknown author"): string {
   const names = authors.map((a) => (typeof a === "string" ? a : a.name));

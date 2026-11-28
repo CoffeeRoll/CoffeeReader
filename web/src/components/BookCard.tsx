@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { BookSummary } from "../api/types";
-import { authorsText, formatIndex } from "../lib/format";
+import { authorsText, formatIndex, formatLabels } from "../lib/format";
 import { BookCover } from "./BookCover";
 import styles from "./BookCard.module.css";
 
@@ -23,6 +23,9 @@ export function BookCard({ book, to, showSeriesIndex, menu, eager, inert }: Prop
     <>
       <div className={styles.coverWrap}>
         <BookCover book={book} eager={eager} />
+        <span className={`${styles.formatChip} ${styles[book.format]}`} title={`${formatLabels[book.format]} file`}>
+          {formatLabels[book.format]}
+        </span>
         {progress?.isFinished && (
           <span className={styles.badge} title="Finished">
             <Check strokeWidth={3} />

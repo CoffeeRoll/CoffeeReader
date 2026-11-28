@@ -12,8 +12,10 @@ public sealed class ReaderService(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     ILibraryFileSystem files,
-    IEbookContentProvider content)
+    IEnumerable<IEbookContentProvider> providers)
 {
+    private readonly IReadOnlyList<IEbookContentProvider> _providers = providers.ToList();
+
     public const int MinQueryLength = 2;
     public const int MaxHits = 500;
 
@@ -26,6 +28,8 @@ public sealed class ReaderService(
 
         return new ReaderManifestDto(
             book.Id,
+            book.Format,
+            book.FileHash.Length > 12 ? book.FileHash[..12] : book.FileHash,
             book.Title,
             book.Authors.OrderBy(a => a.Order).Select(a => a.Author.Name).ToList(),
             book.Language,
@@ -42,7 +46,12 @@ public sealed class ReaderService(
         var chapter = book.Chapters.FirstOrDefault(c => c.Index == index)
             ?? throw NotFoundException.For("Chapter", index);
 
-        var document = await content.GetChapterAsync(files.GetFullPath(book.FilePath), book.FileHash, chapter.Href, cancellationToken);
+        if (book.Format == BookFormat.Pdf)
+        {
+            throw new ValidationException("PDF pages are drawn by the reader in your browser; there are no HTML chapters.");
+        }
+
+        var document = await ProviderFor(book.Format).GetChapterAsync(files.GetFullPath(book.FilePath), book.FileHash, chapter.Href, cancellationToken);
         return new ChapterDto(
             chapter.Index,
             chapter.Href,
@@ -62,7 +71,7 @@ public sealed class ReaderService(
         var book = await db.Books.AsNoTracking().FirstOrDefaultAsync(b => b.Id == bookId && !b.IsMissing, cancellationToken)
             ?? throw NotFoundException.For("Book", bookId);
 
-        return await content.OpenResourceAsync(files.GetFullPath(book.FilePath), path, cancellationToken)
+        return await ProviderFor(book.Format).OpenResourceAsync(files.GetFullPath(book.FilePath), path, cancellationToken)
             ?? throw new NotFoundException($"'{path}' isn't part of this book.");
     }
 
@@ -77,6 +86,7 @@ public sealed class ReaderService(
 
         var book = await LoadBookAsync(bookId, includeToc: false, cancellationToken);
         var fullPath = files.GetFullPath(book.FilePath);
+        var content = ProviderFor(book.Format);
         var hits = new List<SearchHitDto>();
         var total = 0;
 
@@ -108,6 +118,10 @@ public sealed class ReaderService(
 
         return new SearchResponseDto(query, total, total > hits.Count, hits);
     }
+
+    private IEbookContentProvider ProviderFor(BookFormat format) =>
+        _providers.FirstOrDefault(p => p.Format == format)
+        ?? throw new ValidationException($"{format} books can't be opened by this server.");
 
     private async Task<Book> LoadBookAsync(int bookId, bool includeToc, CancellationToken cancellationToken)
     {

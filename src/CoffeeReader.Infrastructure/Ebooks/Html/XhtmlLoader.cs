@@ -4,7 +4,7 @@ using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 
-namespace CoffeeReader.Infrastructure.Ebooks.Epub;
+namespace CoffeeReader.Infrastructure.Ebooks.Html;
 
 /// <summary>
 /// Parses EPUB content documents. They are XHTML, but often not well-formed enough for an XML parser,

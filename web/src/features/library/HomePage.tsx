@@ -53,7 +53,7 @@ export function HomePage() {
             </button>
           }
         >
-          Drop EPUB files anywhere on this page, or copy them into your books folder — CoffeeReader picks them up automatically.
+          Drop EPUB, MOBI or PDF files anywhere on this page, or copy them into your books folder — CoffeeReader picks them up automatically.
         </EmptyState>
         <p className="muted" style={{ display: "flex", gap: 8, justifyContent: "center", alignItems: "center", fontSize: 13 }}>
           <FolderOpen size={16} /> Library folder scans run on start-up and whenever files change.

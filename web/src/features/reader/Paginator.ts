@@ -38,7 +38,7 @@ export interface LinkTarget {
 
 export interface PaginatorEvents {
   onRelocate(location: Relocation): void;
-  onTap(zone: "prev" | "next" | "middle", event: MouseEvent): void;
+  onTap(zone: "prev" | "next" | "middle"): void;
   onSwipe(direction: 1 | -1): void;
   onLink(target: LinkTarget): void;
   onKey(event: KeyboardEvent): void;
@@ -72,7 +72,7 @@ export class Paginator {
   private detachers: (() => void)[] = [];
   private settleTimer = 0;
   private relayoutTimer = 0;
-  private touch: { x: number; y: number; time: number; dragging: boolean; dx: number } | null = null;
+  private touch: { x: number; y: number; time: number; dragging: boolean; dx: number; moved: number } | null = null;
   private suppressClickUntil = 0;
   private readonly iframe: HTMLIFrameElement;
   private readonly bookId: number;
@@ -280,8 +280,8 @@ export class Paginator {
     on("click", (event) => this.onClick(event));
     on("touchstart", (event) => this.onTouchStart(event), { passive: true });
     on("touchmove", (event) => this.onTouchMove(event), { passive: false });
-    on("touchend", () => this.onTouchEnd());
-    on("touchcancel", () => this.onTouchEnd());
+    on("touchend", (event) => this.onTouchEnd(event));
+    on("touchcancel", () => (this.touch = null));
     on("keydown", (event) => this.events.onKey(event));
     on("wheel", (event) => this.events.onWheel(event), { passive: false });
     on("dragstart", (event) => event.preventDefault());
@@ -522,23 +522,29 @@ export class Paginator {
   // ---- Input ---------------------------------------------------------------------------------------
 
   private onClick(event: MouseEvent) {
-    const target = event.target as Element | null;
+    const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+    if (anchor) event.preventDefault();
+
+    // Touch taps are handled on touchend (browsers don't always synthesise a click after a swipe).
+    if (performance.now() < this.suppressClickUntil) return;
+    this.handleTap(event.target as Element | null, event.clientX);
+  }
+
+  private handleTap(target: Element | null, clientX: number) {
     const anchor = target?.closest?.("a[href]") as HTMLAnchorElement | null;
     if (anchor) {
-      event.preventDefault();
       this.followLink(anchor);
       return;
     }
 
-    if (performance.now() < this.suppressClickUntil) return;
     const selection = this.iframe.contentWindow?.getSelection();
     if (selection && !selection.isCollapsed) return;
 
     const width = this.layout?.width ?? this.iframe.clientWidth;
-    const x = event.clientX / width;
+    const x = clientX / width;
     const zone = x < 0.3 ? "prev" : x > 0.7 ? "next" : "middle";
     const mirrored = this.dir === "rtl" && zone !== "middle" ? (zone === "prev" ? "next" : "prev") : zone;
-    this.events.onTap(mirrored, event);
+    this.events.onTap(mirrored);
   }
 
   private followLink(anchor: HTMLAnchorElement) {
@@ -568,7 +574,7 @@ export class Paginator {
     }
 
     const touch = event.touches[0];
-    this.touch = { x: touch.clientX, y: touch.clientY, time: performance.now(), dragging: false, dx: 0 };
+    this.touch = { x: touch.clientX, y: touch.clientY, time: performance.now(), dragging: false, dx: 0, moved: 0 };
   }
 
   private onTouchMove(event: TouchEvent) {
@@ -577,6 +583,7 @@ export class Paginator {
     const touch = event.touches[0];
     const dx = touch.clientX - state.x;
     const dy = touch.clientY - state.y;
+    state.moved = Math.max(state.moved, Math.hypot(dx, dy));
 
     if (!state.dragging) {
       const selection = this.iframe.contentWindow?.getSelection();
@@ -602,10 +609,20 @@ export class Paginator {
     }
   }
 
-  private onTouchEnd() {
+  private onTouchEnd(event: TouchEvent) {
     const state = this.touch;
     this.touch = null;
-    if (!state?.dragging || !this.layout) return;
+    if (!state || !this.layout) return;
+
+    if (!state.dragging) {
+      // A short, still touch is a tap.
+      if (state.moved < 10 && performance.now() - state.time < 350 && event.changedTouches.length === 1) {
+        this.suppressClickUntil = performance.now() + 600;
+        this.handleTap(event.target as Element | null, event.changedTouches[0].clientX);
+      }
+
+      return;
+    }
 
     this.suppressClickUntil = performance.now() + 400;
     const elapsed = Math.max(1, performance.now() - state.time);

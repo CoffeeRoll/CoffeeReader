@@ -764,3 +764,61 @@
 .scrubber {
   touch-action: pan-y;
 }
+
+/* ---- PDF ---- */
+
+/* Fixed tracks: the page area's size must never depend on the (possibly zoomed) page inside it. */
+.pdfStage {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  place-items: stretch;
+}
+
+.pdfFrame {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pdfArea {
+  position: relative;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pdfScroll {
+  place-items: start center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.pdfZoomed {
+  place-items: start start;
+  overflow-x: auto;
+  touch-action: pan-x pan-y;
+}
+
+.pdfSpread {
+  display: grid;
+  justify-content: center;
+}
+
+.pdfPage {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 10px 30px -12px rgba(40, 25, 10, 0.3);
+  transition: opacity 0.15s ease;
+}
+
+.pdfPage canvas {
+  display: block;
+}

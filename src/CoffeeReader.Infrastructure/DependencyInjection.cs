@@ -1,5 +1,7 @@
 using CoffeeReader.Application.Abstractions;
 using CoffeeReader.Infrastructure.Ebooks.Epub;
+using CoffeeReader.Infrastructure.Ebooks.Mobi;
+using CoffeeReader.Infrastructure.Ebooks.Pdf;
 using CoffeeReader.Infrastructure.Imaging;
 using CoffeeReader.Infrastructure.Library;
 using CoffeeReader.Infrastructure.Persistence;
@@ -42,6 +44,10 @@ public static class DependencyInjection
         services.AddSingleton<ICoverStore, CoverStore>();
         services.AddSingleton<IEbookParser, EpubParser>();
         services.AddSingleton<IEbookContentProvider, EpubContentProvider>();
+        services.AddSingleton<IEbookParser, MobiParser>();
+        services.AddSingleton<IEbookContentProvider, MobiContentProvider>();
+        services.AddSingleton<IEbookParser, PdfParser>();
+        services.AddSingleton<IEbookContentProvider, PdfContentProvider>();
 
         services.AddSingleton<LibraryScanService>();
         services.AddSingleton<ILibraryScanTrigger>(provider => provider.GetRequiredService<LibraryScanService>());

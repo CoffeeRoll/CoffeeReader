@@ -34,7 +34,7 @@ public class TextSearcherTests
     [Fact]
     public void Snippets_separate_paragraphs_without_moving_matches()
     {
-        var chapter = CoffeeReader.Infrastructure.Ebooks.Epub.EpubContentProvider.ExtractText("<h2>A Letter</h2><p>like a coin.</p><p>Nobody planted the orchard.</p>");
+        var chapter = CoffeeReader.Infrastructure.Ebooks.Html.HtmlChapterRenderer.ExtractText("<h2>A Letter</h2><p>like a coin.</p><p>Nobody planted the orchard.</p>");
         Assert.Equal("A Letterlike a coin.Nobody planted the orchard.", chapter.Text);
         var match = TextSearcher.FindAll(chapter.Text, "orchard").Single();
         var snippet = TextSearcher.CreateSnippet(chapter.Text, match, chapter.BlockBreaks);

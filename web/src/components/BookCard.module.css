@@ -52,8 +52,8 @@
 .badge {
   position: absolute;
   z-index: 3;
-  top: 6px;
   right: 6px;
+  bottom: 6px;
   display: grid;
   place-items: center;
   width: 24px;
@@ -67,6 +67,33 @@
 .badge svg {
   width: 14px;
   height: 14px;
+}
+
+/* Which kind of file the book is. */
+.formatChip {
+  position: absolute;
+  z-index: 3;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(20, 12, 6, 0.66);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1.45;
+  letter-spacing: 0.07em;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.pdf {
+  background: rgba(168, 38, 28, 0.9);
+}
+
+.mobi {
+  background: rgba(178, 112, 6, 0.92);
 }
 
 .seriesTag {

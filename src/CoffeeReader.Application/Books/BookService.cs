@@ -32,7 +32,8 @@ public sealed class BookService(
                 db.ReadingProgress
                     .Where(p => p.UserId == userId && p.BookId == b.Id)
                     .Select(p => new ProgressSummaryDto(p.Percentage, p.IsFinished, p.UpdatedAt))
-                    .FirstOrDefault()))
+                    .FirstOrDefault(),
+                b.Format))
             .ToListAsync(cancellationToken);
     }
 
@@ -154,7 +155,8 @@ public sealed class BookService(
 
         var extension = Path.GetExtension(book.FilePath);
         var fileName = SafeFileName(book.Title) + extension;
-        return new BookDownload(files.GetFullPath(book.FilePath), fileName, ContentTypes.ForFormat(book.Format));
+        var fullPath = files.GetFullPath(book.FilePath);
+        return new BookDownload(fullPath, fileName, ContentTypes.ForFormat(book.Format), File.GetLastWriteTimeUtc(fullPath), book.FileHash);
     }
 
     private static string SafeFileName(string title)
