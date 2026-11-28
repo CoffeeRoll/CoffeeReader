@@ -15,6 +15,9 @@ public sealed class MobiParser : IEbookParser
 
     public IReadOnlyCollection<string> Extensions { get; } = [".mobi", ".azw", ".prc"];
 
+    /// <summary>1: "&amp;" no longer splits names like "Black &amp; Decker" into two authors.</summary>
+    public int MetadataVersion => 1;
+
     public Task<ParsedEbook> ParseAsync(string fullPath, CancellationToken cancellationToken) =>
         Task.Run(() => Parse(fullPath), cancellationToken);
 
@@ -38,7 +41,7 @@ public sealed class MobiParser : IEbookParser
             }
 
             var authors = header.ExthStrings(Exth.Author)
-                .SelectMany(a => a.Split(['&', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .SelectMany(AuthorNames.Split)
                 .Where(a => !a.Equals("unknown", StringComparison.OrdinalIgnoreCase))
                 .Select(a => new ParsedAuthor(a, a.Contains(',') ? a : null))
                 .ToList();

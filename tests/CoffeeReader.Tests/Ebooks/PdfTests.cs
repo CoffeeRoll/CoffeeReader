@@ -52,6 +52,13 @@ public class PdfTests : IDisposable
     }
 
     [Fact]
+    public void Keeps_a_company_author_whole()
+    {
+        var book = PdfParser.Parse(new PdfBuilder().Author("Black & Decker").WriteTo(_temp.Path, "drills.pdf"));
+        Assert.Equal("Black & Decker", Assert.Single(book.Authors).Name);
+    }
+
+    [Fact]
     public void Uses_the_file_name_when_the_title_is_missing_or_junk()
     {
         Assert.Equal("my notes", PdfParser.Parse(new PdfBuilder().Title(null).WriteTo(_temp.Path, "my_notes.pdf")).Metadata.Title);

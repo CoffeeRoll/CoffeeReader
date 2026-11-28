@@ -61,6 +61,40 @@ public class LibraryScanTests : IClassFixture<CoffeeReaderFactory>
         }
     }
 
+    [Fact]
+    public async Task Books_read_by_an_older_parser_are_read_again_keeping_edits()
+    {
+        _ = _factory.Server;
+        var folder = Path.Combine(_factory.LibraryPath, "Manuals");
+        new PdfBuilder().Title("Cordless Drill Guide").Author("Black & Decker").WriteTo(folder, "drill.pdf");
+        new PdfBuilder().Title("Sander Guide").Author("Black & Decker").WriteTo(folder, "sander.pdf");
+        Backdate(folder);
+        Assert.Equal(2, (await ScanAsync()).Added);
+
+        // Pretend both were imported by an older parser, and that an administrator edited one.
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Books.Where(b => b.FilePath.StartsWith("Manuals/"))
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.ParserVersion, 0).SetProperty(b => b.Title, "Stale title"));
+            await db.Books.Where(b => b.FilePath == "Manuals/sander.pdf").ExecuteUpdateAsync(s => s.SetProperty(b => b.MetadataLocked, true));
+        }
+
+        Assert.Equal(2, (await ScanAsync()).Updated);
+        Assert.Equal(0, (await ScanAsync()).Updated); // only once
+
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var drill = await db.Books.Include(b => b.Authors).ThenInclude(a => a.Author).SingleAsync(b => b.FilePath == "Manuals/drill.pdf");
+            Assert.Equal("Cordless Drill Guide", drill.Title);
+            Assert.Equal("Black & Decker", Assert.Single(drill.Authors).Author.Name);
+            var sander = await db.Books.SingleAsync(b => b.FilePath == "Manuals/sander.pdf");
+            Assert.Equal("Stale title", sander.Title);
+            Assert.True(drill.ParserVersion > 0 && sander.ParserVersion == drill.ParserVersion);
+        }
+    }
+
     private async Task<ScanSummary> ScanAsync()
     {
         await using var scope = _factory.Services.CreateAsyncScope();
